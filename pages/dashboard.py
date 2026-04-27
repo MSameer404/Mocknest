@@ -17,7 +17,7 @@ from mock_format import import_mock
 from styles import COLORS
 
 
-class HomePage(QWidget):
+class DashboardPage(QWidget):
     def __init__(self, db, navigate_to_test, refresh_page, parent=None):
         super().__init__(parent)
         self.db = db
@@ -35,10 +35,6 @@ class HomePage(QWidget):
         heading.setProperty("role", "heading")
         top.addWidget(heading)
         top.addStretch()
-        import_button = QPushButton("Quick Import")
-        import_button.setProperty("role", "primary")
-        import_button.clicked.connect(self._import_mock)
-        top.addWidget(import_button)
         layout.addLayout(top)
 
         stats = QHBoxLayout()
@@ -104,7 +100,8 @@ class HomePage(QWidget):
 
         sections = ", ".join(json.loads(mock.get("sections", "[]")))
         question_count = self.db.question_count(mock["id"])
-        details = QLabel(f"{question_count} questions · {mock['duration_minutes']} min\n{sections}")
+        author = mock.get("author") or "Anonymous"
+        details = QLabel(f"By {author} · {question_count} questions · {mock['duration_minutes']} min\n{sections}")
         details.setProperty("role", "muted")
         layout.addWidget(details)
         layout.addStretch()
@@ -122,6 +119,6 @@ class HomePage(QWidget):
         mock_id = import_mock(self.db, file_path)
         if mock_id:
             QMessageBox.information(self, "Import Complete", "Mock imported successfully.")
-            self.refresh_page("home")
+            self.refresh_page("dashboard")
         else:
             QMessageBox.warning(self, "Import Failed", "Could not import this .jmock file.")

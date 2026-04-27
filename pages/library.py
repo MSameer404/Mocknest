@@ -44,11 +44,7 @@ class LibraryPage(QWidget):
         top.addStretch()
         import_button = QPushButton("Import Mock")
         import_button.clicked.connect(self._import_mock)
-        create_button = QPushButton("Create New Mock")
-        create_button.setProperty("role", "primary")
-        create_button.clicked.connect(self.navigate_to_creator)
         top.addWidget(import_button)
-        top.addWidget(create_button)
         layout.addLayout(top)
 
         self.search = QLineEdit()
@@ -115,8 +111,9 @@ class LibraryPage(QWidget):
         except Exception:
             date_text = mock.get("created_at", "")[:10]
         question_count = self.db.question_count(mock["id"])
+        author = mock.get("author") or "Anonymous"
         details = QLabel(
-            f"Sections: {sections}\nQuestions: {question_count}\nDuration: {mock['duration_minutes']} min\nCreated: {date_text}"
+            f"Creator: {author}\nSections: {sections}\nQuestions: {question_count}\nDuration: {mock['duration_minutes']} min\nCreated: {date_text}"
         )
         details.setProperty("role", "muted")
         layout.addWidget(details)

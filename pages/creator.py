@@ -28,9 +28,18 @@ class CreatorPage(QWidget):
         layout.setContentsMargins(28, 24, 28, 24)
         layout.setSpacing(18)
 
+        heading_layout = QHBoxLayout()
+        heading_layout.addStretch()
         heading = QLabel("Create Mock")
         heading.setProperty("role", "heading")
-        layout.addWidget(heading)
+        heading_layout.addWidget(heading)
+        heading_layout.addStretch()
+        layout.addLayout(heading_layout)
+        
+        layout.addStretch()
+        
+        center_row = QHBoxLayout()
+        center_row.addStretch()
 
         card = QFrame()
         card.setMaximumWidth(720)
@@ -45,63 +54,54 @@ class CreatorPage(QWidget):
         self.title_input.setPlaceholderText("Mock title")
         form.addRow("Mock Title:", self.title_input)
 
-        self.duration_combo = QComboBox()
-        for duration in (60, 90, 120, 180, 210):
-            self.duration_combo.addItem(f"{duration} min", duration)
-        self.duration_combo.setCurrentIndex(3)
-        form.addRow("Duration:", self.duration_combo)
+        self.author_input = QLineEdit()
+        self.author_input.setPlaceholderText("Creator name")
+        form.addRow("Creator Name:", self.author_input)
 
-        marking_row = QHBoxLayout()
-        self.correct_spin = QDoubleSpinBox()
-        self.correct_spin.setRange(0, 20)
-        self.correct_spin.setValue(4)
-        self.correct_spin.setPrefix("+")
-        self.correct_spin.setDecimals(2)
-        self.incorrect_spin = QDoubleSpinBox()
-        self.incorrect_spin.setRange(-20, 0)
-        self.incorrect_spin.setValue(-1)
-        self.incorrect_spin.setDecimals(2)
-        marking_row.addWidget(QLabel("Correct"))
-        marking_row.addWidget(self.correct_spin)
-        marking_row.addWidget(QLabel("Incorrect"))
-        marking_row.addWidget(self.incorrect_spin)
-        form.addRow("Marking:", marking_row)
+        self.exam_combo = QComboBox()
+        self.exam_combo.addItem("JEE Main")
+        self.exam_combo.addItem("JEE Advanced (Coming soon)")
+        # Disable the JEE Advanced option so it's view-only
+        self.exam_combo.model().item(1).setEnabled(False)
+        self.exam_combo.currentIndexChanged.connect(self._toggle_submit)
+        form.addRow("Exam:", self.exam_combo)
 
-        sections_row = QHBoxLayout()
-        self.section_checks = []
-        for section in ("Physics", "Chemistry", "Maths"):
-            check = QCheckBox(section)
-            check.setChecked(True)
-            self.section_checks.append(check)
-            sections_row.addWidget(check)
-        sections_row.addStretch()
-        form.addRow("Sections:", sections_row)
+        info_label = QLabel("Format: JEE Mains (180 mins, +4/-1, 75 spots)")
+        info_label.setProperty("role", "muted")
+        info_label.setStyleSheet("font-weight: bold; margin-top: 10px;")
+        form.addRow(info_label)
 
         form_layout.addLayout(form)
-        submit = QPushButton("Create Mock & Add Questions")
-        submit.setProperty("role", "primary")
-        submit.clicked.connect(self._create_mock)
-        form_layout.addWidget(submit)
-        layout.addWidget(card)
+        self.submit = QPushButton("Create Mock & Add Questions")
+        self.submit.setProperty("role", "primary")
+        self.submit.clicked.connect(self._create_mock)
+        form_layout.addWidget(self.submit)
+        
+        center_row.addWidget(card)
+        center_row.addStretch()
+        layout.addLayout(center_row)
         layout.addStretch()
+
+    def _toggle_submit(self):
+        is_advanced = self.exam_combo.currentText().startswith("JEE Advanced")
+        self.submit.setDisabled(is_advanced)
+        if is_advanced:
+            self.submit.setText("Coming Soon")
+        else:
+            self.submit.setText("Create Mock & Add Questions")
 
     def _create_mock(self):
         title = self.title_input.text().strip()
-        sections = [check.text() for check in self.section_checks if check.isChecked()]
+        author = self.author_input.text().strip() or "Anonymous"
         if not title:
             QMessageBox.warning(self, "Validation", "Mock title is required.")
             return
-        if not sections:
-            QMessageBox.warning(self, "Validation", "Select at least one section.")
-            return
         mock_id = self.db.create_mock(
             title=title,
-            duration=self.duration_combo.currentData(),
-            marks_correct=self.correct_spin.value(),
-            marks_incorrect=self.incorrect_spin.value(),
-            sections=sections,
+            author=author
         )
         if mock_id:
+            self.db.prefill_jee_main_questions(mock_id)
             self.navigate_to_add_questions(mock_id)
         else:
             QMessageBox.warning(self, "Create Failed", "Could not create the mock.")

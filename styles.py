@@ -15,6 +15,7 @@ COLORS = {
     "success": "#27AE60",
     "danger": "#C0392B",
     "warning": "#F39C12",
+    "border": "#4D4D4D",
 }
 
 PALETTE = {

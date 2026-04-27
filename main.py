@@ -12,7 +12,7 @@ from pages.add_questions import AddQuestionsPage
 from pages.analysis import AnalysisPage
 from pages.creator import CreatorPage
 from pages.history import HistoryPage
-from pages.home import HomePage
+from pages.dashboard import DashboardPage
 from pages.library import LibraryPage
 from pages.take_test import TakeTestPage
 
@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         self.resize(1200, 800)
         self._center_on_screen()
-        self.navigate_to("home")
+        self.navigate_to("dashboard")
 
     def _center_on_screen(self):
         screen = QApplication.primaryScreen()
@@ -61,8 +61,8 @@ class MainWindow(QMainWindow):
     def navigate_to(self, page_name: str, **kwargs):
         if page_name in self.sidebar.buttons:
             self.sidebar.set_active(page_name)
-        if page_name == "home":
-            page = HomePage(self.db, self.navigate_to_test, self.navigate_to)
+        if page_name == "dashboard":
+            page = DashboardPage(self.db, self.navigate_to_test, self.navigate_to)
         elif page_name == "library":
             page = LibraryPage(
                 self.db,
@@ -77,8 +77,8 @@ class MainWindow(QMainWindow):
         elif page_name == "add_questions":
             page = AddQuestionsPage(self.db, kwargs.get("mock_id", ""), lambda: self.navigate_to("library"))
         else:
-            page = HomePage(self.db, self.navigate_to_test, self.navigate_to)
-            self.sidebar.set_active("home")
+            page = DashboardPage(self.db, self.navigate_to_test, self.navigate_to)
+            self.sidebar.set_active("dashboard")
         self._set_page(page)
 
     def navigate_to_test(self, mock_id: str):

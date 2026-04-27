@@ -59,7 +59,7 @@ python main.py
 
 ### Taking a Test
 
-1. Select a mock from the **Library** or **Home** page
+1. Select a mock from the **Library** or **Dashboard** page
 2. Click **"Take Test"** to start
 3. Answer questions using the question palette
 4. Submit when done or when time runs out
@@ -84,7 +84,7 @@ Mocknest/
 │   ├── question_card.py
 │   └── question_palette.py
 ├── pages/               # Application pages
-│   ├── home.py
+│   ├── dashboard.py
 │   ├── library.py
 │   ├── creator.py       # Mock creation form
 │   ├── add_questions.py

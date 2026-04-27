@@ -42,6 +42,7 @@ class Database:
                         marks_incorrect REAL NOT NULL DEFAULT -1,
                         sections TEXT NOT NULL DEFAULT '["Physics","Chemistry","Maths"]',
                         created_at TEXT NOT NULL,
+                        author TEXT NOT NULL DEFAULT 'Anonymous',
                         source TEXT NOT NULL DEFAULT 'local'
                     );
 
@@ -65,10 +66,17 @@ class Database:
                         total_score REAL,
                         max_score REAL,
                         answers TEXT NOT NULL DEFAULT '{}',
-                        FOREIGN KEY (mock_id) REFERENCES mocks(id)
+                        FOREIGN KEY (mock_id) REFERENCES mocks(id) ON DELETE CASCADE
                     );
                     """
                 )
+                
+                # Migration: add author column if it doesn't exist
+                try:
+                    conn.execute("ALTER TABLE mocks ADD COLUMN author TEXT NOT NULL DEFAULT 'Anonymous'")
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+                    
         except Exception as exc:
             print(f"Database init error: {exc}")
 
@@ -107,23 +115,24 @@ class Database:
             print(f"get_questions error: {exc}")
             return []
 
-    def create_mock(self, title, duration, marks_correct, marks_incorrect, sections) -> str:
+    def create_mock(self, title, author) -> str:
         mock_id = str(uuid.uuid4())
         try:
             with self.connect() as conn:
                 conn.execute(
                     """
                     INSERT INTO mocks
-                    (id, title, duration_minutes, marks_correct, marks_incorrect, sections, created_at, source)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, title, author, duration_minutes, marks_correct, marks_incorrect, sections, created_at, source)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         mock_id,
                         str(title).strip(),
-                        int(duration),
-                        float(marks_correct),
-                        float(marks_incorrect),
-                        json.dumps(list(sections)),
+                        str(author).strip() or "Anonymous",
+                        int(180),
+                        float(4.0),
+                        float(-1.0),
+                        json.dumps(["Physics", "Chemistry", "Maths"]),
                         datetime.now().isoformat(timespec="seconds"),
                         "local",
                     ),
@@ -140,16 +149,17 @@ class Database:
                 conn.execute(
                     """
                     INSERT INTO mocks
-                    (id, title, duration_minutes, marks_correct, marks_incorrect, sections, created_at, source)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (id, title, author, duration_minutes, marks_correct, marks_incorrect, sections, created_at, source)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
                         mock_id,
                         mock.get("title", "Imported Mock"),
-                        int(mock.get("duration_minutes", 180)),
-                        float(mock.get("marks_correct", 4)),
-                        float(mock.get("marks_incorrect", -1)),
-                        mock.get("sections") if isinstance(mock.get("sections"), str) else json.dumps(mock.get("sections", [])),
+                        mock.get("author") or mock.get("creator") or "Anonymous",
+                        int(180),
+                        float(4.0),
+                        float(-1.0),
+                        json.dumps(["Physics", "Chemistry", "Maths"]),
                         mock.get("created_at") or datetime.now().isoformat(timespec="seconds"),
                         mock.get("source", "imported"),
                     ),
@@ -211,9 +221,44 @@ class Database:
             print(f"insert_question_record error: {exc}")
             return ""
 
+    def update_question(self, question_id, text, options, correct_answer):
+        try:
+            with self.connect() as conn:
+                conn.execute(
+                    """
+                    UPDATE questions
+                    SET text = ?, options = ?, correct_answer = ?
+                    WHERE id = ?
+                    """,
+                    (text.strip(), options, str(correct_answer), question_id),
+                )
+        except Exception as exc:
+            print(f"update_question error: {exc}")
+
+    def prefill_jee_main_questions(self, mock_id):
+        try:
+            with self.connect() as conn:
+                order = 0
+                for section in ("Physics", "Chemistry", "Maths"):
+                    for i in range(25):
+                        qtype = "single" if i < 20 else "numerical"
+                        question_id = str(uuid.uuid4())
+                        conn.execute(
+                            """
+                            INSERT INTO questions
+                            (id, mock_id, section, type, text, options, correct_answer, order_index)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            """,
+                            (question_id, mock_id, section, qtype, "", None, "", order),
+                        )
+                        order += 1
+        except Exception as exc:
+            print(f"prefill_jee_main_questions error: {exc}")
+
     def delete_mock(self, mock_id: str):
         try:
             with self.connect() as conn:
+                conn.execute("DELETE FROM attempts WHERE mock_id = ?", (mock_id,))
                 conn.execute("DELETE FROM mocks WHERE id = ?", (mock_id,))
         except Exception as exc:
             print(f"delete_mock error: {exc}")

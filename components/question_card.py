@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 )
 
 from styles import COLORS
+from utils_render import text_to_html
 
 
 class QuestionCard(QFrame):
@@ -42,6 +43,7 @@ class QuestionCard(QFrame):
         self.number_label = QLabel()
         self.number_label.setStyleSheet(f"color: {COLORS['warning']}; font-weight: 800;")
         self.text_label = QLabel()
+        self.text_label.setTextFormat(Qt.TextFormat.RichText)
         self.text_label.setWordWrap(True)
         self.text_label.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.text_label.setStyleSheet("font-size: 17px; line-height: 1.35;")
@@ -85,25 +87,47 @@ class QuestionCard(QFrame):
             "numerical": "Numerical",
         }.get(qtype, qtype.title())
         self.number_label.setText(f"Q.{index + 1}  {question.get('section', '')} · {type_label}")
-        self.text_label.setText(question.get("text", ""))
+        self.text_label.setText(text_to_html(question.get("text", "")))
 
         if qtype == "single":
             self.button_group = QButtonGroup(self)
             self.button_group.setExclusive(True)
             for option_index, option in enumerate(self._parse_options(question.get("options"))):
                 letter = chr(65 + option_index)
-                radio = QRadioButton(option)
+                container = QWidget()
+                row = QHBoxLayout(container)
+                row.setContentsMargins(0, 0, 0, 0)
+                
+                radio = QRadioButton()
                 radio.setProperty("answer_value", letter)
                 self.button_group.addButton(radio)
                 self.option_widgets.append(radio)
-                self.options_container.addWidget(radio)
+                
+                lbl = QLabel(text_to_html(option))
+                lbl.setTextFormat(Qt.TextFormat.RichText)
+                lbl.setWordWrap(True)
+                
+                row.addWidget(radio)
+                row.addWidget(lbl, 1)
+                self.options_container.addWidget(container)
         elif qtype == "multiple":
             for option_index, option in enumerate(self._parse_options(question.get("options"))):
                 letter = chr(65 + option_index)
-                checkbox = QCheckBox(option)
+                container = QWidget()
+                row = QHBoxLayout(container)
+                row.setContentsMargins(0, 0, 0, 0)
+                
+                checkbox = QCheckBox()
                 checkbox.setProperty("answer_value", letter)
                 self.option_widgets.append(checkbox)
-                self.options_container.addWidget(checkbox)
+                
+                lbl = QLabel(text_to_html(option))
+                lbl.setTextFormat(Qt.TextFormat.RichText)
+                lbl.setWordWrap(True)
+                
+                row.addWidget(checkbox)
+                row.addWidget(lbl, 1)
+                self.options_container.addWidget(container)
         else:
             self.numerical_input = QLineEdit()
             self.numerical_input.setPlaceholderText("Enter numerical answer")

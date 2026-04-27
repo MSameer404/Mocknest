@@ -2,7 +2,6 @@ import json
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QFrame,
     QGridLayout,
@@ -12,11 +11,12 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QScrollArea,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
 
+from components.question_palette import QuestionPalette
+from components.rich_editor import RichEditor
 from styles import COLORS
 
 
@@ -27,12 +27,23 @@ class AddQuestionsPage(QWidget):
         self.mock_id = mock_id
         self.mock = db.get_mock(mock_id)
         self.navigate_to_library = navigate_to_library
+        self.questions = db.get_questions(mock_id)
+        
+        self.current_index = None
+        self.question_states = {}
+        for q in self.questions:
+            status = "answered" if q.get("text", "").strip() else "not_answered"
+            self.question_states[q["id"]] = {"status": status}
+            
         self.section_buttons = {}
-        self.current_section = ""
-        self.question_list_layout = None
-        self.count_label = None
+        self.section_positions = {}
+        for idx, q in enumerate(self.questions):
+            self.section_positions.setdefault(q["section"], idx)
+
+        self.palette = None
         self._build()
-        self._refresh()
+        if self.questions:
+            self._enter_question(0)
 
     def _sections(self):
         try:
@@ -42,85 +53,70 @@ class AddQuestionsPage(QWidget):
 
     def _build(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(28, 20, 28, 20)
-        layout.setSpacing(14)
+        layout.setContentsMargins(18, 14, 18, 14)
+        layout.setSpacing(12)
 
-        top = QHBoxLayout()
+        header = QHBoxLayout()
         title = QLabel(self.mock.get("title", "Add Questions"))
-        title.setProperty("role", "heading")
-        top.addWidget(title, 1)
-        self.count_label = QLabel()
-        self.count_label.setProperty("role", "muted")
-        top.addWidget(self.count_label)
+        title.setStyleSheet("font-size: 22px; font-weight: 900;")
+        header.addWidget(title)
+        header.addStretch()
+
+        for section in self._sections():
+            button = QPushButton(section)
+            button.clicked.connect(lambda checked=False, name=section: self._go_to_section(name))
+            self.section_buttons[section] = button
+            header.addWidget(button)
+            
+        header.addStretch()
+        
         done = QPushButton("Done")
         done.setProperty("role", "primary")
-        done.clicked.connect(self.navigate_to_library)
-        top.addWidget(done)
-        layout.addLayout(top)
+        done.clicked.connect(self._handle_done)
+        header.addWidget(done)
+        layout.addLayout(header)
 
-        tabs = QHBoxLayout()
-        sections = self._sections()
-        self.current_section = sections[0] if sections else ""
-        for section in sections:
-            button = QPushButton(section)
-            button.clicked.connect(lambda checked=False, name=section: self._select_section(name))
-            self.section_buttons[section] = button
-            tabs.addWidget(button)
-        tabs.addStretch()
-        layout.addLayout(tabs)
-
-        form_card = QFrame()
-        form_layout = QVBoxLayout(form_card)
-        form_layout.setContentsMargins(18, 18, 18, 18)
-        form_layout.setSpacing(12)
-
-        row = QHBoxLayout()
-        self.type_combo = QComboBox()
-        self.type_combo.addItem("Single Correct", "single")
-        self.type_combo.addItem("Multiple Correct", "multiple")
-        self.type_combo.addItem("Numerical", "numerical")
-        self.type_combo.currentIndexChanged.connect(self._sync_type_visibility)
-        self.section_combo = QComboBox()
-        for section in sections:
-            self.section_combo.addItem(section)
-        row.addWidget(QLabel("Type:"))
-        row.addWidget(self.type_combo)
-        row.addWidget(QLabel("Section:"))
-        row.addWidget(self.section_combo)
-        row.addStretch()
-        form_layout.addLayout(row)
-
-        form_layout.addWidget(QLabel("Question Text:"))
-        self.question_text = QTextEdit()
-        self.question_text.setMinimumHeight(90)
-        form_layout.addWidget(self.question_text)
+        body = QHBoxLayout()
+        body.setSpacing(14)
+        
+        left_scroll = QScrollArea()
+        left_scroll.setWidgetResizable(True)
+        left_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        
+        left = QFrame()
+        left_layout = QVBoxLayout(left)
+        left_layout.setContentsMargins(16, 16, 16, 16)
+        left_layout.setSpacing(12)
+        
+        meta_row = QHBoxLayout()
+        self.meta_section = QLabel("Section: ")
+        self.meta_section.setStyleSheet("font-weight: bold; color: " + COLORS['accent'])
+        self.meta_type = QLabel("Type: ")
+        self.meta_type.setStyleSheet("font-weight: bold;")
+        meta_row.addWidget(self.meta_section)
+        meta_row.addStretch()
+        meta_row.addWidget(self.meta_type)
+        left_layout.addLayout(meta_row)
+        
+        left_layout.addWidget(QLabel("Question Text (Live Preview Below):"))
+        self.question_text = RichEditor("Enter question text here. Use $$...$$ for LaTeX.", 200)
+        left_layout.addWidget(self.question_text)
 
         self.options_widget = QWidget()
         options_grid = QGridLayout(self.options_widget)
         options_grid.setContentsMargins(0, 0, 0, 0)
         self.option_inputs = []
         for index, letter in enumerate(("A", "B", "C", "D")):
-            options_grid.addWidget(QLabel(f"{letter}:"), index, 0)
-            line = QLineEdit()
-            line.setPlaceholderText(f"Option {letter}")
-            self.option_inputs.append(line)
-            options_grid.addWidget(line, index, 1)
+            options_grid.addWidget(QLabel(f"{letter}:"), index, 0, Qt.AlignmentFlag.AlignTop)
+            editor = RichEditor(f"Option {letter}", 120)
+            self.option_inputs.append(editor)
+            options_grid.addWidget(editor, index, 1)
         self.single_correct = QComboBox()
         for letter in ("A", "B", "C", "D"):
             self.single_correct.addItem(letter)
         options_grid.addWidget(QLabel("Correct Answer:"), 0, 2)
         options_grid.addWidget(self.single_correct, 0, 3)
-        self.multiple_checks = []
-        multi_box = QWidget()
-        multi_row = QHBoxLayout(multi_box)
-        multi_row.setContentsMargins(0, 0, 0, 0)
-        for letter in ("A", "B", "C", "D"):
-            check = QCheckBox(letter)
-            self.multiple_checks.append(check)
-            multi_row.addWidget(check)
-        options_grid.addWidget(QLabel("Multiple Correct:"), 1, 2)
-        options_grid.addWidget(multi_box, 1, 3)
-        form_layout.addWidget(self.options_widget)
+        left_layout.addWidget(self.options_widget)
 
         self.numerical_widget = QWidget()
         numerical_row = QHBoxLayout(self.numerical_widget)
@@ -134,146 +130,135 @@ class AddQuestionsPage(QWidget):
         numerical_row.addWidget(QLabel("Tolerance:"))
         numerical_row.addWidget(tolerance)
         numerical_row.addStretch()
-        form_layout.addWidget(self.numerical_widget)
+        left_layout.addWidget(self.numerical_widget)
 
-        add = QPushButton("+ Add Question")
-        add.setProperty("role", "primary")
-        add.clicked.connect(self._add_question)
-        form_layout.addWidget(add)
-        layout.addWidget(form_card)
+        action_row = QHBoxLayout()
+        action_row.addStretch()
+        clear_btn = QPushButton("Clear Question")
+        clear_btn.clicked.connect(self._clear_question)
+        action_row.addWidget(clear_btn)
+        
+        save_btn = QPushButton("Save Question")
+        save_btn.setProperty("role", "primary")
+        save_btn.clicked.connect(self._save_question)
+        action_row.addWidget(save_btn)
+        left_layout.addLayout(action_row)
+        
+        left_layout.addStretch()
+        left_scroll.setWidget(left)
+        body.addWidget(left_scroll, 1)
 
-        list_title = QLabel("Added Questions")
-        list_title.setProperty("role", "subheading")
-        layout.addWidget(list_title)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        list_content = QWidget()
-        self.question_list_layout = QVBoxLayout(list_content)
-        self.question_list_layout.setContentsMargins(0, 0, 0, 0)
-        self.question_list_layout.setSpacing(8)
-        scroll.setWidget(list_content)
-        layout.addWidget(scroll, 1)
-        self._sync_type_visibility()
-        self._style_tabs()
+        right = QFrame()
+        right.setFixedWidth(270)
+        right_layout = QVBoxLayout(right)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        self.palette = QuestionPalette(self.questions)
+        self.palette.question_selected.connect(self._enter_question)
+        self.palette.sync_states(self.question_states)
+        right_layout.addWidget(self.palette)
+        body.addWidget(right)
 
-    def _style_tabs(self):
-        for section, button in self.section_buttons.items():
-            active = section == self.current_section
-            button.setProperty("active", "true" if active else "false")
-            button.style().unpolish(button)
-            button.style().polish(button)
+        layout.addLayout(body, 1)
 
-    def _select_section(self, section):
-        self.current_section = section
-        index = self.section_combo.findText(section)
-        if index >= 0:
-            self.section_combo.setCurrentIndex(index)
-        self._style_tabs()
-        self._refresh()
+    def _go_to_section(self, section: str):
+        if section in self.section_positions:
+            self._enter_question(self.section_positions[section])
 
-    def _sync_type_visibility(self):
-        qtype = self.type_combo.currentData()
-        self.options_widget.setVisible(qtype in ("single", "multiple"))
-        self.single_correct.setVisible(qtype == "single")
-        for check in self.multiple_checks:
-            check.setVisible(qtype == "multiple")
-        self.numerical_widget.setVisible(qtype == "numerical")
-
-    def _add_question(self):
-        qtype = self.type_combo.currentData()
-        section = self.section_combo.currentText()
-        text = self.question_text.toPlainText().strip()
-        if not text:
-            QMessageBox.warning(self, "Validation", "Question text is required.")
+    def _enter_question(self, index: int):
+        if index < 0 or index >= len(self.questions):
             return
-
-        options = None
-        correct_answer = ""
-        if qtype in ("single", "multiple"):
-            values = [line.text().strip() for line in self.option_inputs]
-            if any(not value for value in values):
-                QMessageBox.warning(self, "Validation", "All four options are required for MCQ questions.")
-                return
-            options = json.dumps([f"{letter}) {value}" for letter, value in zip(("A", "B", "C", "D"), values)])
-            if qtype == "single":
-                correct_answer = self.single_correct.currentText()
-            else:
-                selected = [check.text() for check in self.multiple_checks if check.isChecked()]
-                if not selected:
-                    QMessageBox.warning(self, "Validation", "Select at least one correct option.")
-                    return
-                correct_answer = json.dumps(selected)
+        self.current_index = index
+        question = self.questions[index]
+        
+        self.meta_section.setText(f"Section: {question['section']}")
+        qtype_label = "Single Correct (MCQ)" if question["type"] == "single" else "Numerical"
+        self.meta_type.setText(f"Type: {qtype_label}")
+        
+        self.options_widget.setVisible(question["type"] == "single")
+        self.numerical_widget.setVisible(question["type"] == "numerical")
+        
+        self.question_text.setText(question.get("text", ""))
+        
+        if question["type"] == "single":
+            options = []
+            try:
+                options = json.loads(question.get("options", "[]")) or []
+            except:
+                pass
+            for i, line in enumerate(self.option_inputs):
+                if i < len(options):
+                    val = options[i]
+                    if val.startswith(f"{chr(65+i)}) "):
+                        val = val[3:]
+                    line.setText(val)
+                else:
+                    line.clear()
+            
+            correct = question.get("correct_answer", "")
+            idx = self.single_correct.findText(correct)
+            if idx >= 0:
+                self.single_correct.setCurrentIndex(idx)
         else:
-            correct_answer = self.numerical_answer.text().strip()
-            if not correct_answer:
-                QMessageBox.warning(self, "Validation", "Numerical answer is required.")
-                return
+            self.numerical_answer.setText(question.get("correct_answer", ""))
+            
+        self.palette.set_current(question["id"])
+        
+        for section, btn in self.section_buttons.items():
+            active = section == question["section"]
+            btn.setProperty("active", "true" if active else "false")
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
 
-        order_index = len(self.db.get_questions(self.mock_id))
-        question_id = self.db.add_question(
-            mock_id=self.mock_id,
-            section=section,
-            type_=qtype,
-            text=text,
-            options=options,
-            correct_answer=correct_answer,
-            order_index=order_index,
-        )
-        if question_id:
-            self._clear_form()
-            self._refresh()
-        else:
-            QMessageBox.warning(self, "Save Failed", "Could not add this question.")
-
-    def _clear_form(self):
+    def _clear_question(self):
         self.question_text.clear()
         for line in self.option_inputs:
             line.clear()
-        for check in self.multiple_checks:
-            check.setChecked(False)
         self.numerical_answer.clear()
+        self._save_question()
 
-    def _refresh(self):
-        questions = self.db.get_questions(self.mock_id)
-        sections = self._sections()
-        counts = {section: 0 for section in sections}
-        for question in questions:
-            counts[question["section"]] = counts.get(question["section"], 0) + 1
-        self.count_label.setText(" | ".join(f"{section}: {counts.get(section, 0)}" for section in sections))
+    def _save_question(self):
+        if self.current_index is None:
+            return
+            
+        question = self.questions[self.current_index]
+        text = self.question_text.toPlainText().strip()
+        
+        options_json = None
+        correct_answer = ""
+        
+        if question["type"] == "single":
+            if text:
+                values = [line.toPlainText().strip() for line in self.option_inputs]
+                if any(not value for value in values):
+                    QMessageBox.warning(self, "Validation", "All four options are required for MCQ questions.")
+                    return
+                options_json = json.dumps([f"{letter}) {value}" for letter, value in zip(("A", "B", "C", "D"), values)])
+                correct_answer = self.single_correct.currentText()
+        else:
+            if text:
+                correct_answer = self.numerical_answer.text().strip()
+                if not correct_answer:
+                    QMessageBox.warning(self, "Validation", "Numerical answer is required.")
+                    return
+                    
+        self.db.update_question(question["id"], text, options_json, correct_answer)
+        
+        question["text"] = text
+        question["options"] = options_json
+        question["correct_answer"] = correct_answer
+        
+        status = "answered" if text else "not_answered"
+        self.question_states[question["id"]]["status"] = status
+        self.palette.update_status(question["id"], status)
+        self.palette.update_section_summary(self.question_states)
 
-        while self.question_list_layout.count():
-            item = self.question_list_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-
-        filtered = [question for question in questions if not self.current_section or question["section"] == self.current_section]
-        if not filtered:
-            empty = QLabel("No questions added in this section yet.")
-            empty.setProperty("role", "muted")
-            self.question_list_layout.addWidget(empty)
-        for index, question in enumerate(filtered, start=1):
-            self.question_list_layout.addWidget(self._question_row(index, question))
-        self.question_list_layout.addStretch()
-
-    def _question_row(self, index: int, question: dict):
-        card = QFrame()
-        row = QHBoxLayout(card)
-        badge = QLabel(question["type"].upper())
-        badge.setStyleSheet(
-            f"background-color: {COLORS['accent']}; color: white; border-radius: 6px; padding: 4px 10px; font-weight: 800;"
-        )
-        text = question["text"][:60] + ("..." if len(question["text"]) > 60 else "")
-        label = QLabel(f"{index}. {text}")
-        label.setWordWrap(True)
-        delete = QPushButton("Delete")
-        delete.setProperty("role", "danger")
-        delete.clicked.connect(lambda checked=False, qid=question["id"]: self._delete_question(qid))
-        row.addWidget(badge)
-        row.addWidget(label, 1)
-        row.addWidget(delete)
-        return card
-
-    def _delete_question(self, question_id: str):
-        self.db.delete_question(question_id)
-        self._refresh()
+    def _handle_done(self):
+        empty_count = sum(1 for state in self.question_states.values() if state["status"] == "not_answered")
+        if empty_count > 0:
+            QMessageBox.warning(
+                self, 
+                "Incomplete Mock", 
+                f"You still have {empty_count} empty question spots. Please fill or clear all spots before finishing."
+            )
+            return
+        self.navigate_to_library()

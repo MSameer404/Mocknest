@@ -1,5 +1,5 @@
 from PyQt6.QtCore import pyqtSignal
-from PyQt6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QFrame, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from styles import COLORS
 
@@ -22,9 +22,8 @@ class Sidebar(QWidget):
         layout.addWidget(logo)
 
         for page, label in (
-            ("home", "Home"),
+            ("dashboard", "Dashboard"),
             ("library", "Library"),
-            ("creator", "Creator"),
             ("history", "History"),
         ):
             button = QPushButton(label)
@@ -34,10 +33,27 @@ class Sidebar(QWidget):
             self.buttons[page] = button
 
         layout.addStretch()
+
+        # Management section at the bottom
+        sep = QFrame()
+        sep.setFixedHeight(1)
+        sep.setStyleSheet(f"background-color: {COLORS['border']}; margin: 10px 0;")
+        layout.addWidget(sep)
+        
+        mgmt_label = QLabel("BUILD MOCK")
+        mgmt_label.setStyleSheet(f"color: {COLORS['text_secondary']}; font-size: 11px; font-weight: 800; padding: 0 16px 4px 16px;")
+        layout.addWidget(mgmt_label)
+
+        creator_btn = QPushButton("Creator")
+        creator_btn.setCursor(creator_btn.cursor().shape())
+        creator_btn.clicked.connect(lambda: self.nav_clicked.emit("creator"))
+        layout.addWidget(creator_btn)
+        self.buttons["creator"] = creator_btn
+
         version = QLabel("v1.0")
         version.setStyleSheet(f"color: {COLORS['text_secondary']}; padding: 10px;")
         layout.addWidget(version)
-        self.set_active("home")
+        self.set_active("dashboard")
 
     def set_active(self, page_name: str):
         for name, button in self.buttons.items():

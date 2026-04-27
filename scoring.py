@@ -103,10 +103,10 @@ def calculate_score(questions, answers, marks_correct, marks_incorrect) -> Attem
                     question_score = float(marks_correct)
                     was_correct = True
                 else:
-                    question_score = 0.0
+                    question_score = float(marks_incorrect)
                     was_wrong = True
             except Exception:
-                question_score = 0.0
+                question_score = float(marks_incorrect)
                 was_wrong = True
 
         if answer is not None:
