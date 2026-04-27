@@ -5,7 +5,7 @@ from styles import COLORS, PALETTE
 
 SECTION_COLORS = {
     "Physics": "#E74C3C",
-    "Chemistry": "#3498DB",
+    "Chemistry": "#E67E22",
     "Math": "#27AE60",
     "Mathematics": "#27AE60",
 }

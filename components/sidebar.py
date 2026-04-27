@@ -1,7 +1,7 @@
 from PyQt6.QtCore import pyqtSignal
 from PyQt6.QtWidgets import QLabel, QPushButton, QVBoxLayout, QWidget
 
-from styles import COLORS, SIDEBAR_STYLE
+from styles import COLORS
 
 
 class Sidebar(QWidget):
@@ -11,14 +11,13 @@ class Sidebar(QWidget):
         super().__init__(parent)
         self.setObjectName("sidebar")
         self.setFixedWidth(200)
-        self.setStyleSheet(SIDEBAR_STYLE)
         self.buttons = {}
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 24, 16, 16)
         layout.setSpacing(10)
 
-        logo = QLabel("JEE Mock")
+        logo = QLabel("Mocknest")
         logo.setStyleSheet("font-size: 25px; font-weight: 800; padding: 4px 0 18px 0;")
         layout.addWidget(logo)
 

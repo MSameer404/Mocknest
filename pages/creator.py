@@ -14,7 +14,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from styles import BUTTON_PRIMARY, CARD_STYLE
 
 
 class CreatorPage(QWidget):
@@ -34,7 +33,6 @@ class CreatorPage(QWidget):
         layout.addWidget(heading)
 
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         card.setMaximumWidth(720)
         form_layout = QVBoxLayout(card)
         form_layout.setContentsMargins(24, 24, 24, 24)
@@ -81,7 +79,7 @@ class CreatorPage(QWidget):
 
         form_layout.addLayout(form)
         submit = QPushButton("Create Mock & Add Questions")
-        submit.setStyleSheet(BUTTON_PRIMARY)
+        submit.setProperty("role", "primary")
         submit.clicked.connect(self._create_mock)
         form_layout.addWidget(submit)
         layout.addWidget(card)

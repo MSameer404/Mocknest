@@ -1,6 +1,8 @@
 import sys
+from pathlib import Path
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QStackedWidget, QWidget
 
 from components.sidebar import Sidebar
@@ -13,13 +15,15 @@ from pages.history import HistoryPage
 from pages.home import HomePage
 from pages.library import LibraryPage
 from pages.take_test import TakeTestPage
-from styles import MAIN_STYLE
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("JEE Mock App")
+        self.setWindowTitle("Mocknest")
+        icon_path = Path(__file__).parent / "assets" / "app.ico"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
         self.db = Database()
         seed_database(self.db)
 
@@ -33,7 +37,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.sidebar)
         layout.addWidget(self.stack, 1)
         self.setCentralWidget(central)
-        self.showMaximized()
+        self.resize(1200, 800)
+        self._center_on_screen()
         self.navigate_to("home")
 
     def _center_on_screen(self):
@@ -90,13 +95,22 @@ class MainWindow(QMainWindow):
         self._set_page(page)
 
 
+def load_theme(app: QApplication):
+    theme_path = Path(__file__).parent / "theme.qss"
+    if theme_path.exists():
+        app.setStyleSheet(theme_path.read_text(encoding="utf-8"))
+
+
 def main():
     app = QApplication(sys.argv)
-    app.setApplicationName("JEE Mock App")
+    app.setApplicationName("Mocknest")
     app.setApplicationVersion("1.0.0")
+    icon_path = Path(__file__).parent / "assets" / "app.ico"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
     if hasattr(Qt.ApplicationAttribute, "AA_UseHighDpiPixmaps"):
         app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
-    app.setStyleSheet(MAIN_STYLE)
+    load_theme(app)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())

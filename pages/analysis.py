@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 )
 
 from scoring import calculate_score
-from styles import BUTTON_PRIMARY, CARD_STYLE, COLORS
+from styles import COLORS
 
 
 class ScoreTrendChart(QWidget):
@@ -113,7 +113,7 @@ class AnalysisPage(QWidget):
         top.addWidget(heading)
         top.addStretch()
         retake = QPushButton("Retake Test")
-        retake.setStyleSheet(BUTTON_PRIMARY)
+        retake.setProperty("role", "primary")
         retake.clicked.connect(lambda checked=False: self.navigate_to_test(self.mock["id"]))
         back = QPushButton("Back to Library")
         back.clicked.connect(self.navigate_to_library)
@@ -136,7 +136,6 @@ class AnalysisPage(QWidget):
 
     def _score_hero(self):
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         layout = QVBoxLayout(card)
         layout.setContentsMargins(22, 20, 22, 20)
         score = QLabel(f"Your Score: {self.result.total_score:g} / {self.result.max_score:g}")
@@ -179,7 +178,6 @@ class AnalysisPage(QWidget):
 
     def _time_analysis(self):
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         layout = QVBoxLayout(card)
         times = []
         for question in self.questions:
@@ -205,14 +203,12 @@ class AnalysisPage(QWidget):
         attempts = list(reversed(attempts[:5]))
         chart = ScoreTrendChart(attempts, self.attempt_id)
         frame = QFrame()
-        frame.setStyleSheet(CARD_STYLE)
         layout = QVBoxLayout(frame)
         layout.addWidget(chart)
         return frame
 
     def _question_review(self):
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         layout = QVBoxLayout(card)
         title = QLabel("Question Review")
         title.setProperty("role", "subheading")
@@ -223,9 +219,6 @@ class AnalysisPage(QWidget):
 
     def _review_row(self, index: int, question: dict):
         row = QFrame()
-        row.setStyleSheet(
-            f"QFrame {{ background-color: {COLORS['bg_secondary']}; border: 1px solid {COLORS['border']}; border-radius: 6px; }}"
-        )
         layout = QHBoxLayout(row)
         info = self.answers.get(question["id"], {})
         answer = info.get("answer")

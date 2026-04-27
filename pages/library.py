@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
 )
 
 from mock_format import export_mock, import_mock
-from styles import BUTTON_DANGER, BUTTON_PRIMARY, CARD_STYLE, COLORS
+from styles import COLORS
 
 
 class LibraryPage(QWidget):
@@ -45,7 +45,7 @@ class LibraryPage(QWidget):
         import_button = QPushButton("Import Mock")
         import_button.clicked.connect(self._import_mock)
         create_button = QPushButton("Create New Mock")
-        create_button.setStyleSheet(BUTTON_PRIMARY)
+        create_button.setProperty("role", "primary")
         create_button.clicked.connect(self.navigate_to_creator)
         top.addWidget(import_button)
         top.addWidget(create_button)
@@ -94,7 +94,6 @@ class LibraryPage(QWidget):
 
     def _mock_card(self, mock: dict):
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         card.setMinimumHeight(210)
         layout = QVBoxLayout(card)
         header = QHBoxLayout()
@@ -103,7 +102,7 @@ class LibraryPage(QWidget):
         title.setWordWrap(True)
         badge = QLabel(mock.get("source", "local").upper())
         badge.setStyleSheet(
-            f"background-color: {COLORS['accent']}; color: white; border-radius: 4px; padding: 3px 7px; font-size: 11px; font-weight: 800;"
+            f"background-color: {COLORS['accent']}; color: white; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 800;"
         )
         header.addWidget(title, 1)
         header.addWidget(badge)
@@ -125,12 +124,12 @@ class LibraryPage(QWidget):
 
         buttons = QHBoxLayout()
         start = QPushButton("Start Test")
-        start.setStyleSheet(BUTTON_PRIMARY)
+        start.setProperty("role", "primary")
         start.clicked.connect(lambda checked=False, mock_id=mock["id"]: self.navigate_to_test(mock_id))
         export = QPushButton("Export")
         export.clicked.connect(lambda checked=False, mock_id=mock["id"], title=mock["title"]: self._export_mock(mock_id, title))
         delete = QPushButton("Delete")
-        delete.setStyleSheet(BUTTON_DANGER)
+        delete.setProperty("role", "danger")
         delete.clicked.connect(lambda checked=False, mock_id=mock["id"]: self._delete_mock(mock_id))
         buttons.addWidget(start)
         buttons.addWidget(export)
@@ -140,7 +139,7 @@ class LibraryPage(QWidget):
 
     def _export_mock(self, mock_id: str, title: str):
         safe_title = "".join(ch if ch.isalnum() or ch in (" ", "-", "_") else "_" for ch in title).strip()
-        file_path, _ = QFileDialog.getSaveFileName(self, "Export Mock", f"{safe_title}.jmock", "JEE Mock Files (*.jmock)")
+        file_path, _ = QFileDialog.getSaveFileName(self, "Export Mock", f"{safe_title}.jmock", "Mocknest Files (*.jmock)")
         if not file_path:
             return
         if export_mock(self.db, mock_id, file_path):
@@ -149,7 +148,7 @@ class LibraryPage(QWidget):
             QMessageBox.warning(self, "Export Failed", "Could not export this mock.")
 
     def _import_mock(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Import Mock", "", "JEE Mock Files (*.jmock)")
+        file_path, _ = QFileDialog.getOpenFileName(self, "Import Mock", "", "Mocknest Files (*.jmock)")
         if not file_path:
             return
         if import_mock(self.db, file_path):

@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from styles import BUTTON_DANGER, BUTTON_PRIMARY, CARD_STYLE, COLORS
+from styles import COLORS
 
 
 class AddQuestionsPage(QWidget):
@@ -53,7 +53,7 @@ class AddQuestionsPage(QWidget):
         self.count_label.setProperty("role", "muted")
         top.addWidget(self.count_label)
         done = QPushButton("Done")
-        done.setStyleSheet(BUTTON_PRIMARY)
+        done.setProperty("role", "primary")
         done.clicked.connect(self.navigate_to_library)
         top.addWidget(done)
         layout.addLayout(top)
@@ -70,7 +70,6 @@ class AddQuestionsPage(QWidget):
         layout.addLayout(tabs)
 
         form_card = QFrame()
-        form_card.setStyleSheet(CARD_STYLE)
         form_layout = QVBoxLayout(form_card)
         form_layout.setContentsMargins(18, 18, 18, 18)
         form_layout.setSpacing(12)
@@ -138,7 +137,7 @@ class AddQuestionsPage(QWidget):
         form_layout.addWidget(self.numerical_widget)
 
         add = QPushButton("+ Add Question")
-        add.setStyleSheet(BUTTON_PRIMARY)
+        add.setProperty("role", "primary")
         add.clicked.connect(self._add_question)
         form_layout.addWidget(add)
         layout.addWidget(form_card)
@@ -160,11 +159,9 @@ class AddQuestionsPage(QWidget):
     def _style_tabs(self):
         for section, button in self.section_buttons.items():
             active = section == self.current_section
-            color = COLORS["accent"] if active else COLORS["bg_secondary"]
-            border = COLORS["accent"] if active else COLORS["border"]
-            button.setStyleSheet(
-                f"background-color: {color}; border: 1px solid {border}; border-radius: 6px; font-weight: 800;"
-            )
+            button.setProperty("active", "true" if active else "false")
+            button.style().unpolish(button)
+            button.style().polish(button)
 
     def _select_section(self, section):
         self.current_section = section
@@ -261,17 +258,16 @@ class AddQuestionsPage(QWidget):
 
     def _question_row(self, index: int, question: dict):
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         row = QHBoxLayout(card)
         badge = QLabel(question["type"].upper())
         badge.setStyleSheet(
-            f"background-color: {COLORS['accent']}; color: white; border-radius: 4px; padding: 4px 7px; font-weight: 800;"
+            f"background-color: {COLORS['accent']}; color: white; border-radius: 6px; padding: 4px 10px; font-weight: 800;"
         )
         text = question["text"][:60] + ("..." if len(question["text"]) > 60 else "")
         label = QLabel(f"{index}. {text}")
         label.setWordWrap(True)
         delete = QPushButton("Delete")
-        delete.setStyleSheet(BUTTON_DANGER)
+        delete.setProperty("role", "danger")
         delete.clicked.connect(lambda checked=False, qid=question["id"]: self._delete_question(qid))
         row.addWidget(badge)
         row.addWidget(label, 1)

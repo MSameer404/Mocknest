@@ -17,7 +17,7 @@ from components.question_card import QuestionCard
 from components.question_palette import QuestionPalette
 from components.timer_widget import TimerWidget
 from scoring import calculate_score
-from styles import BUTTON_DANGER, BUTTON_PRIMARY, CARD_STYLE, COLORS
+from styles import COLORS, PALETTE
 
 
 class TakeTestPage(QWidget):
@@ -89,19 +89,6 @@ class TakeTestPage(QWidget):
 
         palette_info = QPushButton("ℹ")
         palette_info.setFixedSize(32, 32)
-        palette_info.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {COLORS['bg_secondary']};
-                border: 1px solid {COLORS['border']};
-                border-radius: 6px;
-                font-size: 14px;
-                font-weight: 700;
-            }}
-            QPushButton:hover {{
-                border-color: {COLORS['accent']};
-                background-color: {COLORS['bg_card']};
-            }}
-        """)
         palette_info.setToolTip("Question Palette Info")
         palette_info.clicked.connect(self._show_palette_info)
         header.addWidget(palette_info)
@@ -115,7 +102,6 @@ class TakeTestPage(QWidget):
         body = QHBoxLayout()
         body.setSpacing(14)
         left = QFrame()
-        left.setStyleSheet(CARD_STYLE)
         left_layout = QVBoxLayout(left)
         left_layout.setContentsMargins(16, 16, 16, 16)
         left_layout.setSpacing(12)
@@ -128,7 +114,7 @@ class TakeTestPage(QWidget):
         self.clear_button = QPushButton("Clear Response")
         self.clear_button.clicked.connect(self._clear_response)
         self.save_button = QPushButton("Save & Next")
-        self.save_button.setStyleSheet(BUTTON_PRIMARY)
+        self.save_button.setProperty("role", "primary")
         self.save_button.clicked.connect(self._save_next)
         action_row.addWidget(self.mark_button)
         action_row.addWidget(self.clear_button)
@@ -149,7 +135,6 @@ class TakeTestPage(QWidget):
 
         right = QFrame()
         right.setFixedWidth(270)
-        right.setStyleSheet(CARD_STYLE)
         right_layout = QVBoxLayout(right)
         right_layout.setContentsMargins(0, 0, 0, 0)
         self.palette = QuestionPalette(self.questions)
@@ -159,7 +144,7 @@ class TakeTestPage(QWidget):
         layout.addLayout(body, 1)
 
         submit = QPushButton("Submit Test")
-        submit.setStyleSheet(BUTTON_DANGER)
+        submit.setProperty("role", "danger")
         submit.clicked.connect(lambda checked=False: self._submit(auto=False))
         layout.addWidget(submit)
 
@@ -167,7 +152,6 @@ class TakeTestPage(QWidget):
         self.timer_widget.start()
 
     def _show_palette_info(self):
-        from styles import PALETTE
 
         dialog = QDialog(self)
         dialog.setWindowTitle("Question Palette Legend")
@@ -209,19 +193,7 @@ class TakeTestPage(QWidget):
         layout.addWidget(summary)
 
         close_btn = QPushButton("Close")
-        close_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {COLORS['accent']};
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-weight: 700;
-            }}
-            QPushButton:hover {{
-                background-color: {COLORS['accent_hover']};
-            }}
-        """)
+        close_btn.setProperty("role", "primary")
         close_btn.clicked.connect(dialog.accept)
         layout.addWidget(close_btn)
 
@@ -230,25 +202,9 @@ class TakeTestPage(QWidget):
     def _style_section_tabs(self):
         for section, button in self.section_buttons.items():
             active = section == self.current_section
-            section_colors = {"Physics": "#E74C3C", "Chemistry": "#3498DB", "Math": "#27AE60", "Mathematics": "#27AE60"}
-            section_color = section_colors.get(section, COLORS["accent"])
-            bg = section_color if active else COLORS["bg_secondary"]
-            border = section_color if active else COLORS["border"]
-            button.setStyleSheet(
-                f"""
-                QPushButton {{
-                    background-color: {bg};
-                    border: 2px solid {border};
-                    border-radius: 6px;
-                    font-weight: 800;
-                    padding: 4px 12px;
-                }}
-                QPushButton:hover {{
-                    border-color: {section_color};
-                    background-color: {COLORS['bg_card']};
-                }}
-                """
-            )
+            button.setProperty("active", "true" if active else "false")
+            button.style().unpolish(button)
+            button.style().polish(button)
 
     def _record_current_question(self, mode: str = "preserve"):
         if self.current_index is None or not self.questions:

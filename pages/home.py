@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
 )
 
 from mock_format import import_mock
-from styles import BUTTON_PRIMARY, CARD_STYLE, COLORS
+from styles import COLORS
 
 
 class HomePage(QWidget):
@@ -36,7 +36,7 @@ class HomePage(QWidget):
         top.addWidget(heading)
         top.addStretch()
         import_button = QPushButton("Quick Import")
-        import_button.setStyleSheet(BUTTON_PRIMARY)
+        import_button.setProperty("role", "primary")
         import_button.clicked.connect(self._import_mock)
         top.addWidget(import_button)
         layout.addLayout(top)
@@ -83,7 +83,6 @@ class HomePage(QWidget):
 
     def _stat_card(self, label: str, value: str):
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         card.setMinimumHeight(100)
         layout = QVBoxLayout(card)
         title = QLabel(label)
@@ -96,7 +95,6 @@ class HomePage(QWidget):
 
     def _mock_card(self, mock: dict):
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         card.setMinimumHeight(165)
         layout = QVBoxLayout(card)
         title = QLabel(mock["title"])
@@ -112,13 +110,13 @@ class HomePage(QWidget):
         layout.addStretch()
 
         button = QPushButton("Start Test")
-        button.setStyleSheet(BUTTON_PRIMARY)
+        button.setProperty("role", "primary")
         button.clicked.connect(lambda checked=False, mock_id=mock["id"]: self.navigate_to_test(mock_id))
         layout.addWidget(button)
         return card
 
     def _import_mock(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Import Mock", "", "JEE Mock Files (*.jmock)")
+        file_path, _ = QFileDialog.getOpenFileName(self, "Import Mock", "", "Mocknest Files (*.jmock)")
         if not file_path:
             return
         mock_id = import_mock(self.db, file_path)

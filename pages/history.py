@@ -13,7 +13,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from styles import CARD_STYLE
 
 
 class HistoryPage(QWidget):
@@ -69,7 +68,6 @@ class HistoryPage(QWidget):
 
     def _stat_card(self, label, value):
         card = QFrame()
-        card.setStyleSheet(CARD_STYLE)
         card.setMinimumHeight(80)
         layout = QVBoxLayout(card)
         title = QLabel(label)

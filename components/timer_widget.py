@@ -46,7 +46,6 @@ class TimerWidget(QLabel):
             f"""
             QLabel {{
                 background-color: {COLORS["bg_secondary"]};
-                border: 1px solid {COLORS["border"]};
                 border-radius: 8px;
                 color: {color};
                 font-size: 18px;
