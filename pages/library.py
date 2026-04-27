@@ -1,6 +1,8 @@
 import json
 from datetime import datetime
 
+from PyQt6.QtCore import Qt
+
 from PyQt6.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -41,10 +43,29 @@ class LibraryPage(QWidget):
         heading = QLabel("Mock Library")
         heading.setProperty("role", "heading")
         top.addWidget(heading)
+        
         top.addStretch()
+
         import_button = QPushButton("Import Mock")
+        import_button.setProperty("role", "success")
+        import_button.setMinimumHeight(36)
         import_button.clicked.connect(self._import_mock)
         top.addWidget(import_button)
+
+        self.mains_btn = QPushButton("JEE Mains")
+        self.mains_btn.setProperty("role", "primary")
+        self.mains_btn.setCheckable(True)
+        self.mains_btn.setChecked(True)
+        self.mains_btn.setMinimumHeight(36)
+        
+        self.adv_btn = QPushButton("JEE Advanced (Coming Soon)")
+        self.adv_btn.setCheckable(True)
+        self.adv_btn.setEnabled(False)
+        self.adv_btn.setMinimumHeight(36)
+
+        top.addWidget(self.mains_btn)
+        top.addWidget(self.adv_btn)
+        
         layout.addLayout(top)
 
         self.search = QLineEdit()
@@ -55,12 +76,10 @@ class LibraryPage(QWidget):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         self.content = QWidget()
-        self.grid = QGridLayout(self.content)
+        self.grid = QVBoxLayout(self.content)
         self.grid.setContentsMargins(0, 0, 0, 0)
-        self.grid.setSpacing(16)
-        self.grid.setColumnStretch(0, 1)
-        self.grid.setColumnStretch(1, 1)
-        self.grid.setColumnStretch(2, 1)
+        self.grid.setSpacing(4)
+        self.grid.setAlignment(Qt.AlignmentFlag.AlignTop)
         scroll.setWidget(self.content)
         layout.addWidget(scroll, 1)
 
@@ -85,13 +104,16 @@ class LibraryPage(QWidget):
             empty.setProperty("role", "muted")
             self.grid.addWidget(empty, 0, 0)
             return
-        for index, mock in enumerate(mocks):
-            self.grid.addWidget(self._mock_card(mock), index // 3, index % 3)
+        for mock in mocks:
+            self.grid.addWidget(self._mock_card(mock))
 
     def _mock_card(self, mock: dict):
         card = QFrame()
-        card.setMinimumHeight(210)
-        layout = QVBoxLayout(card)
+        card.setProperty("role", "mock-card")
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(20, 16, 20, 16)
+
+        info_layout = QVBoxLayout()
         header = QHBoxLayout()
         title = QLabel(mock["title"])
         title.setStyleSheet("font-size: 18px; font-weight: 800;")
@@ -100,9 +122,10 @@ class LibraryPage(QWidget):
         badge.setStyleSheet(
             f"background-color: {COLORS['accent']}; color: white; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 800;"
         )
-        header.addWidget(title, 1)
+        header.addWidget(title)
         header.addWidget(badge)
-        layout.addLayout(header)
+        header.addStretch()
+        info_layout.addLayout(header)
 
         sections = ", ".join(json.loads(mock.get("sections", "[]")))
         date_text = mock.get("created_at", "")[:10]
@@ -113,20 +136,24 @@ class LibraryPage(QWidget):
         question_count = self.db.question_count(mock["id"])
         author = mock.get("author") or "Anonymous"
         details = QLabel(
-            f"Creator: {author}\nSections: {sections}\nQuestions: {question_count}\nDuration: {mock['duration_minutes']} min\nCreated: {date_text}"
+            f"Creator: {author} | Sections: {sections} | Questions: {question_count} | Duration: {mock['duration_minutes']} min | Created: {date_text}"
         )
         details.setProperty("role", "muted")
-        layout.addWidget(details)
-        layout.addStretch()
+        info_layout.addWidget(details)
+        layout.addLayout(info_layout, 1)
 
         buttons = QHBoxLayout()
+        buttons.setSpacing(8)
         start = QPushButton("Start Test")
         start.setProperty("role", "primary")
+        start.setMinimumHeight(36)
         start.clicked.connect(lambda checked=False, mock_id=mock["id"]: self.navigate_to_test(mock_id))
         export = QPushButton("Export")
+        export.setMinimumHeight(36)
         export.clicked.connect(lambda checked=False, mock_id=mock["id"], title=mock["title"]: self._export_mock(mock_id, title))
         delete = QPushButton("Delete")
         delete.setProperty("role", "danger")
+        delete.setMinimumHeight(36)
         delete.clicked.connect(lambda checked=False, mock_id=mock["id"]: self._delete_mock(mock_id))
         buttons.addWidget(start)
         buttons.addWidget(export)

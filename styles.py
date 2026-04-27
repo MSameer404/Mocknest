@@ -5,17 +5,17 @@ This module exports color constants used by components that need runtime colors.
 """
 
 COLORS = {
-    "bg_primary": "#1A1A1A",
-    "bg_secondary": "#2D2D2D",
-    "bg_card": "#3D3D3D",
-    "accent": "#E67E22",
-    "accent_hover": "#D35400",
-    "text_primary": "#EAEAEA",
+    "bg_primary": "#000000",
+    "bg_secondary": "#0F0F0F",
+    "bg_card": "#1A1A1A",
+    "accent": "#00D2FF",
+    "accent_hover": "#3A7BD5",
+    "text_primary": "#FFFFFF",
     "text_secondary": "#A0A0A0",
-    "success": "#27AE60",
-    "danger": "#C0392B",
-    "warning": "#F39C12",
-    "border": "#4D4D4D",
+    "success": "#00FF87",
+    "danger": "#FF0055",
+    "warning": "#FFD700",
+    "border": "#222222",
 }
 
 PALETTE = {

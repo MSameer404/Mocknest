@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QStackedWidget, QWidget
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QStackedWidget, QWidget, QFrame
 
 from components.sidebar import Sidebar
 from data.seed import seed_database
@@ -33,8 +33,15 @@ class MainWindow(QMainWindow):
         layout.setSpacing(0)
         self.sidebar = Sidebar()
         self.sidebar.nav_clicked.connect(self.navigate_to)
+        
+        # Vertical Separator Line
+        line = QFrame()
+        line.setFixedWidth(1)
+        line.setStyleSheet("background-color: #222222; border: none;")
+        
         self.stack = QStackedWidget()
         layout.addWidget(self.sidebar)
+        layout.addWidget(line)
         layout.addWidget(self.stack, 1)
         self.setCentralWidget(central)
         self.resize(1200, 800)

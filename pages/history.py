@@ -3,14 +3,15 @@ from datetime import datetime
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
+    QHeaderView,
 )
 
 
@@ -34,80 +35,36 @@ class HistoryPage(QWidget):
         heading.setProperty("role", "heading")
         top.addWidget(heading)
         top.addStretch()
-        self.filter_combo = QComboBox()
-        self.filter_combo.setMinimumWidth(240)
-        self.filter_combo.currentIndexChanged.connect(self._load)
-        top.addWidget(self.filter_combo)
-        layout.addLayout(top)
+        self.mains_btn = QPushButton("JEE Mains")
+        self.mains_btn.setProperty("role", "primary")
+        self.mains_btn.setCheckable(True)
+        self.mains_btn.setChecked(True)
+        self.mains_btn.setMinimumHeight(36)
+        
+        self.adv_btn = QPushButton("JEE Advanced (Coming Soon)")
+        self.adv_btn.setCheckable(True)
+        self.adv_btn.setEnabled(False)
+        self.adv_btn.setMinimumHeight(36)
 
-        self.stats_row = QHBoxLayout()
-        layout.addLayout(self.stats_row)
+        top.addWidget(self.mains_btn)
+        top.addWidget(self.adv_btn)
+        layout.addLayout(top)
 
         self.table = QTableWidget(0, 5)
         self.table.setHorizontalHeaderLabels(["Date", "Mock Title", "Score", "Percentage", "Duration"])
         self.table.setAlternatingRowColors(True)
         self.table.verticalHeader().setVisible(False)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.table.horizontalHeader().setMinimumHeight(45)
+        self.table.verticalHeader().setDefaultSectionSize(45)
         self.table.cellClicked.connect(self._open_attempt)
         layout.addWidget(self.table, 1)
-
-        self._populate_filter()
-
-    def _populate_filter(self):
-        current = self.filter_combo.currentData()
-        self.filter_combo.blockSignals(True)
-        self.filter_combo.clear()
-        self.filter_combo.addItem("All Mocks", "")
-        for mock in self.db.get_all_mocks():
-            self.filter_combo.addItem(mock["title"], mock["id"])
-        if current:
-            index = self.filter_combo.findData(current)
-            if index >= 0:
-                self.filter_combo.setCurrentIndex(index)
-        self.filter_combo.blockSignals(False)
-
-    def _stat_card(self, label, value):
-        card = QFrame()
-        card.setMinimumHeight(80)
-        layout = QVBoxLayout(card)
-        title = QLabel(label)
-        title.setProperty("role", "muted")
-        number = QLabel(value)
-        number.setStyleSheet("font-size: 23px; font-weight: 800;")
-        layout.addWidget(title)
-        layout.addWidget(number)
-        return card
-
-    def _clear_stats(self):
-        while self.stats_row.count():
-            item = self.stats_row.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
 
     def _load(self):
         if not hasattr(self, "table"):
             return
-        selected_mock = self.filter_combo.currentData() if hasattr(self, "filter_combo") else ""
         attempts = [attempt for attempt in self.db.get_all_attempts() if attempt.get("finished_at")]
-        if selected_mock:
-            attempts = [attempt for attempt in attempts if attempt.get("mock_id") == selected_mock]
-
-        percentages = [
-            ((attempt.get("total_score") or 0) / attempt["max_score"] * 100)
-            for attempt in attempts
-            if attempt.get("max_score")
-        ]
-        self._clear_stats()
-        total = len(attempts)
-        best = max(percentages) if percentages else 0.0
-        average = sum(percentages) / len(percentages) if percentages else 0.0
-        for label, value in (
-            ("Total Attempts", str(total)),
-            ("Best Score", f"{best:.1f}%"),
-            ("Average Score", f"{average:.1f}%"),
-        ):
-            self.stats_row.addWidget(self._stat_card(label, value))
 
         self.table.setRowCount(len(attempts))
         self.attempt_ids = []
@@ -125,8 +82,11 @@ class HistoryPage(QWidget):
             for col, value in enumerate(values):
                 item = QTableWidgetItem(value)
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+                if col == 1:
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+                else:
+                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 self.table.setItem(row, col, item)
-        self.table.resizeColumnsToContents()
 
     def _format_date(self, value):
         try:
