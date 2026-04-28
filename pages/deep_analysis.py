@@ -82,9 +82,17 @@ class DeepAnalysisPage(QWidget):
         self.question_layout.setContentsMargins(18, 12, 18, 12)
         self.question_layout.setSpacing(16)
         
+        header_row = QHBoxLayout()
         self.q_header = QLabel()
         self.q_header.setStyleSheet(f"color: {COLORS['warning']}; font-weight: 800; font-size: 15px;")
-        self.question_layout.addWidget(self.q_header)
+        header_row.addWidget(self.q_header)
+        header_row.addStretch()
+        
+        self.time_lbl = QLabel()
+        self.time_lbl.setStyleSheet(f"color: {COLORS['accent']}; font-weight: 800; font-size: 15px;")
+        header_row.addWidget(self.time_lbl)
+        
+        self.question_layout.addLayout(header_row)
 
         self.q_text = QLabel()
         self.q_text.setTextFormat(Qt.TextFormat.RichText)
@@ -322,7 +330,13 @@ class DeepAnalysisPage(QWidget):
         qtype = question.get("type", "single")
         type_str = {"single": "Single Choice", "multiple": "Multiple Choice", "numerical": "Numerical"}.get(qtype, qtype.title())
         
+        ans_info = self.answers.get(question["id"])
+        time_spent = ans_info.get("time_spent_seconds", 0) if isinstance(ans_info, dict) else 0
+        m, s = divmod(time_spent, 60)
+        time_str = f"{m}m {s}s" if m > 0 else f"{s}s"
+        
         self.q_header.setText(f"Question {index + 1} · {question.get('section', '')} · {type_str}")
+        self.time_lbl.setText(f"Time Spent: {time_str}")
         self.q_text.setText(text_to_html(question.get("text", "")))
         
         self._clear_options()

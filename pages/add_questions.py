@@ -61,14 +61,6 @@ class AddQuestionsPage(QWidget):
         title.setStyleSheet("font-size: 22px; font-weight: 900;")
         header.addWidget(title)
         header.addStretch()
-
-        for section in self._sections():
-            button = QPushButton(section)
-            button.clicked.connect(lambda checked=False, name=section: self._go_to_section(name))
-            self.section_buttons[section] = button
-            header.addWidget(button)
-            
-        header.addStretch()
         
         done = QPushButton("Done")
         done.setProperty("role", "primary")
@@ -111,13 +103,17 @@ class AddQuestionsPage(QWidget):
             editor = RichEditor(f"Option {letter}", 80)
             self.option_inputs.append(editor)
             options_grid.addWidget(editor, index, 1)
+        left_layout.addWidget(self.options_widget)
+        
+        self.mcq_ans_widget = QWidget()
+        mcq_ans_layout = QHBoxLayout(self.mcq_ans_widget)
+        mcq_ans_layout.setContentsMargins(0, 0, 0, 0)
         self.single_correct = QComboBox()
         for letter in ("A", "B", "C", "D"):
             self.single_correct.addItem(letter)
-        options_grid.addWidget(QLabel("Correct Answer:"), 0, 2)
-        options_grid.addWidget(self.single_correct, 0, 3)
-        left_layout.addWidget(self.options_widget)
-
+        mcq_ans_layout.addWidget(QLabel("Correct Answer:"))
+        mcq_ans_layout.addWidget(self.single_correct)
+        
         self.numerical_widget = QWidget()
         numerical_row = QHBoxLayout(self.numerical_widget)
         numerical_row.setContentsMargins(0, 0, 0, 0)
@@ -125,23 +121,29 @@ class AddQuestionsPage(QWidget):
         self.numerical_answer.setPlaceholderText("Value")
         tolerance = QLineEdit("±0.01")
         tolerance.setReadOnly(True)
+        tolerance.setFixedWidth(60)
         numerical_row.addWidget(QLabel("Answer Value:"))
         numerical_row.addWidget(self.numerical_answer)
         numerical_row.addWidget(QLabel("Tolerance:"))
         numerical_row.addWidget(tolerance)
-        numerical_row.addStretch()
-        left_layout.addWidget(self.numerical_widget)
-
-        action_row = QHBoxLayout()
-        action_row.addStretch()
-        clear_btn = QPushButton("Clear Question")
-        clear_btn.clicked.connect(self._clear_question)
-        action_row.addWidget(clear_btn)
         
-        save_btn = QPushButton("Save Question")
-        save_btn.setProperty("role", "primary")
-        save_btn.clicked.connect(self._save_question)
-        action_row.addWidget(save_btn)
+        action_row = QHBoxLayout()
+        action_row.addWidget(self.mcq_ans_widget)
+        action_row.addWidget(self.numerical_widget)
+        action_row.addStretch()
+        
+        self.lock_btn = QPushButton("🔒 Lock Question")
+        self.lock_btn.clicked.connect(self._toggle_lock)
+        action_row.addWidget(self.lock_btn)
+        
+        self.clear_btn = QPushButton("Clear Question")
+        self.clear_btn.clicked.connect(self._clear_question)
+        action_row.addWidget(self.clear_btn)
+        
+        self.save_btn = QPushButton("Save Question")
+        self.save_btn.setProperty("role", "primary")
+        self.save_btn.clicked.connect(self._save_question)
+        action_row.addWidget(self.save_btn)
         left_layout.addLayout(action_row)
         
         left_layout.addStretch()
@@ -175,7 +177,20 @@ class AddQuestionsPage(QWidget):
         self.meta_type.setText(f"Type: {qtype_label}")
         
         self.options_widget.setVisible(question["type"] == "single")
+        self.mcq_ans_widget.setVisible(question["type"] == "single")
         self.numerical_widget.setVisible(question["type"] == "numerical")
+
+        is_locked = bool(question.get("locked", 0))
+        self.lock_btn.setText("🔓 Unlock" if is_locked else "🔒 Lock")
+        
+        self.question_text.setEnabled(not is_locked)
+        for line in self.option_inputs:
+            line.setEnabled(not is_locked)
+        self.single_correct.setEnabled(not is_locked)
+        self.numerical_answer.setEnabled(not is_locked)
+        
+        self.clear_btn.setEnabled(not is_locked)
+        self.save_btn.setEnabled(not is_locked)
         
         self.question_text.setText(question.get("text", ""))
         
@@ -209,6 +224,17 @@ class AddQuestionsPage(QWidget):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 
+    def _toggle_lock(self):
+        if self.current_index is None:
+            return
+        question = self.questions[self.current_index]
+        is_locked = not bool(question.get("locked", 0))
+        
+        self.db.lock_question(question["id"], is_locked)
+        question["locked"] = 1 if is_locked else 0
+        
+        self._enter_question(self.current_index)
+
     def _clear_question(self):
         self.question_text.clear()
         for line in self.option_inputs:
@@ -228,10 +254,12 @@ class AddQuestionsPage(QWidget):
         
         if question["type"] == "single":
             if text:
-                values = [line.toPlainText().strip() for line in self.option_inputs]
-                if any(not value for value in values):
-                    QMessageBox.warning(self, "Validation", "All four options are required for MCQ questions.")
-                    return
+                values = []
+                for i, letter in enumerate(("A", "B", "C", "D")):
+                    val = self.option_inputs[i].toPlainText().strip()
+                    if not val:
+                        val = f"Option {letter}"
+                    values.append(val)
                 options_json = json.dumps([f"{letter}) {value}" for letter, value in zip(("A", "B", "C", "D"), values)])
                 correct_answer = self.single_correct.currentText()
         else:

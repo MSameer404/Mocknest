@@ -115,15 +115,13 @@ class LibraryPage(QWidget):
 
         info_layout = QVBoxLayout()
         header = QHBoxLayout()
-        title = QLabel(mock["title"])
+        mock_name = mock["title"]
+        if len(mock_name) > 50:
+            mock_name = mock_name[:47] + "..."
+        title = QLabel(mock_name)
         title.setStyleSheet("font-size: 18px; font-weight: 800;")
-        title.setWordWrap(True)
-        badge = QLabel(mock.get("source", "local").upper())
-        badge.setStyleSheet(
-            f"background-color: {COLORS['accent']}; color: white; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: 800;"
-        )
+        title.setWordWrap(False)
         header.addWidget(title)
-        header.addWidget(badge)
         header.addStretch()
         info_layout.addLayout(header)
 

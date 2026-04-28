@@ -169,14 +169,15 @@ class QuestionPalette(QWidget):
             border = sec_style["border"]
             fg = sec_style["fg"]
 
+        border_width = "4px" if current else "2px"
         if current:
-            border = COLORS['accent']
-
+            border = COLORS.get('warning', '#FFE066')
+            
         button.setStyleSheet(f"""
             QPushButton {{
                 background-color: {bg}; 
                 color: {fg};
-                border: 2px solid {border}; 
+                border: {border_width} solid {border}; 
                 border-radius: 6px; 
                 font-size: 15px;
                 font-weight: bold;

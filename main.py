@@ -35,13 +35,13 @@ class MainWindow(QMainWindow):
         self.sidebar.nav_clicked.connect(self.navigate_to)
         
         # Vertical Separator Line
-        line = QFrame()
-        line.setFixedWidth(1)
-        line.setStyleSheet("background-color: #222222; border: none;")
+        self.sidebar_sep = QFrame()
+        self.sidebar_sep.setFixedWidth(1)
+        self.sidebar_sep.setStyleSheet("background-color: #222222; border: none;")
         
         self.stack = QStackedWidget()
         layout.addWidget(self.sidebar)
-        layout.addWidget(line)
+        layout.addWidget(self.sidebar_sep)
         layout.addWidget(self.stack, 1)
         self.setCentralWidget(central)
         self.resize(1200, 800)
@@ -70,6 +70,28 @@ class MainWindow(QMainWindow):
         else:
             event.ignore()
 
+    def _restore_ui(self):
+        self.showMaximized()
+        self.sidebar.show()
+        if hasattr(self, "sidebar_sep"):
+            self.sidebar_sep.show()
+
+    def _enter_protected_mode(self):
+        self.sidebar.hide()
+        if hasattr(self, "sidebar_sep"):
+            self.sidebar_sep.hide()
+        self.showFullScreen()
+        QMessageBox.information(
+            self, 
+            "Protected Window", 
+            "You are in a protected window now. Your work will be lost if you force quit. Submit for test giving and Done for creating."
+        )
+
+    def _expand_editor_mode(self):
+        self.sidebar.hide()
+        if hasattr(self, "sidebar_sep"):
+            self.sidebar_sep.hide()
+
     def _set_page(self, widget: QWidget):
         while self.stack.count():
             old = self.stack.widget(0)
@@ -95,15 +117,25 @@ class MainWindow(QMainWindow):
         elif page_name == "history":
             page = HistoryPage(self.db, self.navigate_to_analysis)
         elif page_name == "add_questions":
-            page = AddQuestionsPage(self.db, kwargs.get("mock_id", ""), lambda: self.navigate_to("library"))
+            self._expand_editor_mode()
+            page = AddQuestionsPage(self.db, kwargs.get("mock_id", ""), self._exit_add_questions)
         else:
             page = DashboardPage(self.db, self.navigate_to_test, self.navigate_to)
             self.sidebar.set_active("dashboard")
         self._set_page(page)
 
+    def _exit_add_questions(self):
+        self._restore_ui()
+        self.navigate_to("creator")
+
     def navigate_to_test(self, mock_id: str):
-        page = TakeTestPage(self.db, mock_id, self.navigate_to_analysis)
+        self._enter_protected_mode()
+        page = TakeTestPage(self.db, mock_id, self._exit_test)
         self._set_page(page)
+
+    def _exit_test(self, attempt_id: str):
+        self._restore_ui()
+        self.navigate_to_analysis(attempt_id)
 
     def navigate_to_analysis(self, attempt_id: str):
         page = AnalysisPage(

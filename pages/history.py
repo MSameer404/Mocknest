@@ -106,16 +106,13 @@ class HistoryPage(QWidget):
         info_layout = QVBoxLayout()
         header = QHBoxLayout()
         
-        title = QLabel(attempt.get("mock_title") or "Deleted Mock")
+        mock_name = attempt.get("mock_title") or "Deleted Mock"
+        if len(mock_name) > 50:
+            mock_name = mock_name[:47] + "..."
+        title = QLabel(mock_name)
         title.setStyleSheet("font-size: 18px; font-weight: 800;")
-        title.setWordWrap(True)
+        title.setWordWrap(False)
         header.addWidget(title)
-        
-        badge = QLabel(f"SCORE: {attempt.get('total_score') or 0:g}/{attempt.get('max_score') or 0:g}")
-        badge.setStyleSheet(
-            f"background-color: #2D1115; color: {COLORS['danger']}; border: 1px solid {COLORS['danger']}; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 800;"
-        )
-        header.addWidget(badge)
         header.addStretch()
         info_layout.addLayout(header)
 
@@ -152,6 +149,11 @@ class HistoryPage(QWidget):
         buttons = QHBoxLayout()
         buttons.setSpacing(8)
         
+        badge = QLabel(f"SCORE: {attempt.get('total_score') or 0:g}/{attempt.get('max_score') or 0:g}")
+        badge.setStyleSheet(
+            f"background-color: #2D1115; color: {COLORS['danger']}; border: 1px solid {COLORS['danger']}; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 800;"
+        )
+        
         analyze = QPushButton("Analyze")
         analyze.setProperty("role", "primary")
         analyze.setMinimumHeight(36)
@@ -162,6 +164,7 @@ class HistoryPage(QWidget):
         delete.setMinimumHeight(36)
         delete.clicked.connect(lambda checked=False, att_id=attempt["id"]: self._delete_attempt(att_id))
         
+        buttons.addWidget(badge)
         buttons.addWidget(analyze)
         buttons.addWidget(delete)
         layout.addLayout(buttons)

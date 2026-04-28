@@ -40,39 +40,21 @@ class RichEditor(QWidget):
         self._render_timer.timeout.connect(self._update_preview)
 
     def _build(self, placeholder):
-        layout = QVBoxLayout(self)
+        layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(4)
+        layout.setSpacing(6)
 
-        toolbar = QHBoxLayout()
-        toolbar.setContentsMargins(0, 0, 0, 0)
-        
-        lbl = QLabel("Markdown / LaTeX ($$...$$)")
-        lbl.setProperty("role", "muted")
-        toolbar.addWidget(lbl)
-        toolbar.addStretch()
-        
-        add_img_btn = QPushButton("📷 Add Image")
-        add_img_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        add_img_btn.clicked.connect(self._add_image)
-        toolbar.addWidget(add_img_btn)
-        
-        layout.addLayout(toolbar)
-
-        # Splitter for raw edit vs preview
-        splitter = QSplitter(Qt.Orientation.Vertical)
-        
         self.editor = QTextEdit()
         self.editor.setPlaceholderText(placeholder)
         self.editor.textChanged.connect(self._on_text_changed)
-        splitter.addWidget(self.editor)
-
-        self.preview = QTextBrowser()
-        self.preview.setOpenExternalLinks(False)
-        self.preview.setStyleSheet("background-color: #FAFAFA; border: 1px solid #E0E0E0;")
-        splitter.addWidget(self.preview)
-
-        layout.addWidget(splitter)
+        layout.addWidget(self.editor, 1)
+        
+        self.add_img_btn = QPushButton("📷")
+        self.add_img_btn.setToolTip("Add Image")
+        self.add_img_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.add_img_btn.clicked.connect(self._add_image)
+        self.add_img_btn.setFixedWidth(40)
+        layout.addWidget(self.add_img_btn)
 
     def _add_image(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -100,9 +82,7 @@ class RichEditor(QWidget):
         self.text_changed.emit()
 
     def _update_preview(self):
-        raw_text = self.editor.toPlainText()
-        html = text_to_html(raw_text)
-        self.preview.setHtml(html)
+        pass
 
     def toPlainText(self) -> str:
         return self.editor.toPlainText()

@@ -55,6 +55,7 @@ class Database:
                         options TEXT,
                         correct_answer TEXT NOT NULL,
                         order_index INTEGER NOT NULL,
+                        locked INTEGER NOT NULL DEFAULT 0,
                         FOREIGN KEY (mock_id) REFERENCES mocks(id) ON DELETE CASCADE
                     );
 
@@ -74,6 +75,11 @@ class Database:
                 # Migration: add author column if it doesn't exist
                 try:
                     conn.execute("ALTER TABLE mocks ADD COLUMN author TEXT NOT NULL DEFAULT 'Anonymous'")
+                except sqlite3.OperationalError:
+                    pass  # Column already exists
+
+                try:
+                    conn.execute("ALTER TABLE questions ADD COLUMN locked INTEGER NOT NULL DEFAULT 0")
                 except sqlite3.OperationalError:
                     pass  # Column already exists
                     
@@ -234,6 +240,16 @@ class Database:
                 )
         except Exception as exc:
             print(f"update_question error: {exc}")
+
+    def lock_question(self, question_id: str, locked: bool):
+        try:
+            with self.connect() as conn:
+                conn.execute(
+                    "UPDATE questions SET locked = ? WHERE id = ?",
+                    (1 if locked else 0, question_id),
+                )
+        except Exception as exc:
+            print(f"lock_question error: {exc}")
 
     def prefill_jee_main_questions(self, mock_id):
         try:
