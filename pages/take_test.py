@@ -33,7 +33,6 @@ class TakeTestPage(QWidget):
         self.current_index = None
         self.current_section = ""
         self.section_positions = {}
-        self.section_buttons = {}
         self.question_enter_time = None
         self.submitted = False
         self.question_card = None
@@ -81,14 +80,10 @@ class TakeTestPage(QWidget):
         header.addWidget(title)
         header.addStretch()
 
-        for section in self._sections():
-            button = QPushButton(section)
-            button.clicked.connect(lambda checked=False, name=section: self._go_to_section(name))
-            self.section_buttons[section] = button
-            header.addWidget(button)
 
-        palette_info = QPushButton("ℹ")
-        palette_info.setFixedSize(32, 32)
+
+        palette_info = QPushButton("Info")
+        palette_info.setMinimumHeight(32)
         palette_info.setToolTip("Question Palette Info")
         palette_info.clicked.connect(self._show_palette_info)
         header.addWidget(palette_info)
@@ -199,12 +194,6 @@ class TakeTestPage(QWidget):
 
         dialog.exec()
 
-    def _style_section_tabs(self):
-        for section, button in self.section_buttons.items():
-            active = section == self.current_section
-            button.setProperty("active", "true" if active else "false")
-            button.style().unpolish(button)
-            button.style().polish(button)
 
     def _record_current_question(self, mode: str = "preserve"):
         if self.current_index is None or not self.questions:
@@ -241,6 +230,7 @@ class TakeTestPage(QWidget):
             state["answer"],
             state["time_spent"],
             state["marked_for_review"],
+            status=state["status"],
         )
         self.palette.update_status(question_id, state["status"])
         self.palette.update_section_summary(self.question_states)
@@ -258,12 +248,11 @@ class TakeTestPage(QWidget):
         state = self.question_states[question["id"]]
         if state["status"] == "not_visited":
             state["status"] = "not_answered"
-            self.db.save_answer(self.attempt_id, question["id"], None, state["time_spent"], False)
+            self.db.save_answer(self.attempt_id, question["id"], None, state["time_spent"], False, status="not_answered")
         self.question_card.set_question(question, index)
         self.question_card.set_answer(state["answer"])
         self.palette.sync_states(self.question_states)
         self.palette.set_current(question["id"])
-        self._style_section_tabs()
         self._sync_nav_buttons()
         self.question_enter_time = time.monotonic()
 
@@ -331,12 +320,14 @@ class TakeTestPage(QWidget):
                 state["answer"],
                 state["time_spent"],
                 state["marked_for_review"],
+                status=state["status"],
             )
         answer_payload = {
             question_id: {
                 "answer": state["answer"],
                 "time_spent_seconds": state["time_spent"],
                 "marked_for_review": state["marked_for_review"],
+                "status": state["status"],
             }
             for question_id, state in self.question_states.items()
         }

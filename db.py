@@ -263,6 +263,13 @@ class Database:
         except Exception as exc:
             print(f"delete_mock error: {exc}")
 
+    def delete_attempt(self, attempt_id: str):
+        try:
+            with self.connect() as conn:
+                conn.execute("DELETE FROM attempts WHERE id = ?", (attempt_id,))
+        except Exception as exc:
+            print(f"delete_attempt error: {exc}")
+
     def delete_question(self, question_id: str):
         try:
             with self.connect() as conn:
@@ -291,7 +298,7 @@ class Database:
             print(f"start_attempt error: {exc}")
             return ""
 
-    def save_answer(self, attempt_id, question_id, answer, time_spent_seconds, marked_for_review):
+    def save_answer(self, attempt_id, question_id, answer, time_spent_seconds, marked_for_review, status="visited"):
         try:
             with self.connect() as conn:
                 row = conn.execute(
@@ -304,6 +311,7 @@ class Database:
                     "answer": answer,
                     "time_spent_seconds": int(time_spent_seconds),
                     "marked_for_review": bool(marked_for_review),
+                    "status": status,
                 }
                 conn.execute(
                     "UPDATE attempts SET answers = ? WHERE id = ?",

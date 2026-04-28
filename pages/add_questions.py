@@ -99,7 +99,7 @@ class AddQuestionsPage(QWidget):
         left_layout.addLayout(meta_row)
         
         left_layout.addWidget(QLabel("Question Text (Live Preview Below):"))
-        self.question_text = RichEditor("Enter question text here. Use $$...$$ for LaTeX.", 200)
+        self.question_text = RichEditor("Enter question text here. Use $$...$$ for LaTeX.", 140)
         left_layout.addWidget(self.question_text)
 
         self.options_widget = QWidget()
@@ -108,7 +108,7 @@ class AddQuestionsPage(QWidget):
         self.option_inputs = []
         for index, letter in enumerate(("A", "B", "C", "D")):
             options_grid.addWidget(QLabel(f"{letter}:"), index, 0, Qt.AlignmentFlag.AlignTop)
-            editor = RichEditor(f"Option {letter}", 120)
+            editor = RichEditor(f"Option {letter}", 80)
             self.option_inputs.append(editor)
             options_grid.addWidget(editor, index, 1)
         self.single_correct = QComboBox()

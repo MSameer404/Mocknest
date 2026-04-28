@@ -3,7 +3,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QStackedWidget, QWidget, QFrame
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QStackedWidget, QWidget, QFrame, QMessageBox
 
 from components.sidebar import Sidebar
 from data.seed import seed_database
@@ -57,6 +57,19 @@ class MainWindow(QMainWindow):
                 geometry.center().y() - self.height() // 2,
             )
 
+    def closeEvent(self, event):
+        reply = QMessageBox.question(
+            self,
+            "Quit Application?",
+            "Are you sure you want to close Mocknest?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            event.accept()
+        else:
+            event.ignore()
+
     def _set_page(self, widget: QWidget):
         while self.stack.count():
             old = self.stack.widget(0)
@@ -97,7 +110,17 @@ class MainWindow(QMainWindow):
             self.db,
             attempt_id,
             self.navigate_to_test,
-            lambda: self.navigate_to("library"),
+            lambda: self.navigate_to("history"),
+            self.navigate_to_deep_analysis,
+        )
+        self._set_page(page)
+
+    def navigate_to_deep_analysis(self, attempt_id: str):
+        from pages.deep_analysis import DeepAnalysisPage
+        page = DeepAnalysisPage(
+            self.db,
+            attempt_id,
+            lambda: self.navigate_to_analysis(attempt_id)
         )
         self._set_page(page)
 
@@ -119,7 +142,7 @@ def main():
         app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
     load_theme(app)
     window = MainWindow()
-    window.show()
+    window.showMaximized()
     sys.exit(app.exec())
 
 

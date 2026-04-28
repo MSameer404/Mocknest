@@ -38,6 +38,7 @@ def calculate_score(questions, answers, marks_correct, marks_incorrect) -> Attem
     correct_count = 0
     wrong_count = 0
     unattempted_count = 0
+    not_visited_count = 0
     section_breakdown = {}
     answer_results = {}
 
@@ -51,10 +52,12 @@ def calculate_score(questions, answers, marks_correct, marks_incorrect) -> Attem
             answer = _normal_answer(raw_info.get("answer"))
             time_spent = int(raw_info.get("time_spent_seconds", raw_info.get("time_spent", 0)) or 0)
             marked = bool(raw_info.get("marked_for_review", False))
+            status = raw_info.get("status", "visited" if (time_spent > 0 or answer is not None) else "not_visited")
         else:
             answer = _normal_answer(raw_info)
             time_spent = 0
             marked = False
+            status = "visited" if answer is not None else "not_visited"
 
         if section not in section_breakdown:
             section_breakdown[section] = {
@@ -62,6 +65,7 @@ def calculate_score(questions, answers, marks_correct, marks_incorrect) -> Attem
                 "correct": 0,
                 "wrong": 0,
                 "unattempted": 0,
+                "not_visited": 0,
                 "attempted": 0,
                 "total": 0,
                 "accuracy": 0.0,
@@ -72,12 +76,15 @@ def calculate_score(questions, answers, marks_correct, marks_incorrect) -> Attem
         question_score = 0.0
         was_correct = False
         was_wrong = False
-        was_unattempted = False
+        was_not_visited = (status == "not_visited")
 
         if answer is None:
-            was_unattempted = True
-            unattempted_count += 1
-            breakdown["unattempted"] += 1
+            if was_not_visited:
+                not_visited_count += 1
+                breakdown["not_visited"] += 1
+            else:
+                unattempted_count += 1
+                breakdown["unattempted"] += 1
         elif qtype == "single":
             if str(answer) == str(correct):
                 question_score = float(marks_correct)
@@ -122,7 +129,7 @@ def calculate_score(questions, answers, marks_correct, marks_incorrect) -> Attem
         breakdown["score"] += question_score
         denominator = breakdown["correct"] + breakdown["wrong"]
         breakdown["accuracy"] = (breakdown["correct"] / denominator * 100) if denominator else 0.0
-        answer_results[qid] = AttemptAnswer(answer, time_spent, marked)
+        answer_results[qid] = AttemptAnswer(answer, time_spent, marked, status)
 
     return AttemptResult(
         attempt_id="",
@@ -131,6 +138,7 @@ def calculate_score(questions, answers, marks_correct, marks_incorrect) -> Attem
         correct_count=correct_count,
         wrong_count=wrong_count,
         unattempted_count=unattempted_count,
+        not_visited_count=not_visited_count,
         section_breakdown=section_breakdown,
         answers=answer_results,
     )

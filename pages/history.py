@@ -6,14 +6,16 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QPushButton,
-    QTableWidget,
-    QTableWidgetItem,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
-    QHeaderView,
+    QMessageBox,
 )
 
+from styles import COLORS
+from scoring import calculate_score
 
 
 class HistoryPage(QWidget):
@@ -21,7 +23,8 @@ class HistoryPage(QWidget):
         super().__init__(parent)
         self.db = db
         self.navigate_to_analysis = navigate_to_analysis
-        self.attempt_ids = []
+        self.search_text = ""
+        self.grid = None
         self._build()
         self._load()
 
@@ -50,43 +53,130 @@ class HistoryPage(QWidget):
         top.addWidget(self.adv_btn)
         layout.addLayout(top)
 
-        self.table = QTableWidget(0, 5)
-        self.table.setHorizontalHeaderLabels(["Date", "Mock Title", "Score", "Percentage", "Duration"])
-        self.table.setAlternatingRowColors(True)
-        self.table.verticalHeader().setVisible(False)
-        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.table.horizontalHeader().setMinimumHeight(45)
-        self.table.verticalHeader().setDefaultSectionSize(45)
-        self.table.cellClicked.connect(self._open_attempt)
-        layout.addWidget(self.table, 1)
+        self.search = QLineEdit()
+        self.search.setPlaceholderText("Search attempts by mock title")
+        self.search.textChanged.connect(self._on_search)
+        layout.addWidget(self.search)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        self.content = QWidget()
+        self.grid = QVBoxLayout(self.content)
+        self.grid.setContentsMargins(0, 0, 0, 0)
+        self.grid.setSpacing(12)
+        self.grid.setAlignment(Qt.AlignmentFlag.AlignTop)
+        scroll.setWidget(self.content)
+        layout.addWidget(scroll, 1)
+
+    def _on_search(self, text):
+        self.search_text = text.lower().strip()
+        self._load()
+
+    def _clear_grid(self):
+        while self.grid.count():
+            item = self.grid.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
 
     def _load(self):
-        if not hasattr(self, "table"):
+        if not hasattr(self, "grid") or self.grid is None:
             return
-        attempts = [attempt for attempt in self.db.get_all_attempts() if attempt.get("finished_at")]
+        self._clear_grid()
 
-        self.table.setRowCount(len(attempts))
-        self.attempt_ids = []
-        for row, attempt in enumerate(attempts):
-            self.attempt_ids.append(attempt["id"])
-            percent = ((attempt.get("total_score") or 0) / attempt["max_score"] * 100) if attempt.get("max_score") else 0
-            duration = self._duration_text(attempt)
-            values = [
-                self._format_date(attempt.get("finished_at") or attempt.get("started_at")),
-                attempt.get("mock_title") or "Deleted Mock",
-                f"{attempt.get('total_score') or 0:g} / {attempt.get('max_score') or 0:g}",
-                f"{percent:.1f}%",
-                duration,
-            ]
-            for col, value in enumerate(values):
-                item = QTableWidgetItem(value)
-                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
-                if col == 1:
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
-                else:
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.table.setItem(row, col, item)
+        attempts = [attempt for attempt in self.db.get_all_attempts() if attempt.get("finished_at")]
+        if self.search_text:
+            attempts = [attempt for attempt in attempts if self.search_text in (attempt.get("mock_title") or "").lower()]
+
+        if not attempts:
+            empty = QLabel("No attempts found.")
+            empty.setProperty("role", "muted")
+            self.grid.addWidget(empty)
+            return
+
+        for attempt in attempts:
+            self.grid.addWidget(self._attempt_card(attempt))
+
+    def _attempt_card(self, attempt: dict):
+        card = QFrame()
+        card.setProperty("role", "mock-card")
+        layout = QHBoxLayout(card)
+        layout.setContentsMargins(20, 16, 20, 16)
+
+        info_layout = QVBoxLayout()
+        header = QHBoxLayout()
+        
+        title = QLabel(attempt.get("mock_title") or "Deleted Mock")
+        title.setStyleSheet("font-size: 18px; font-weight: 800;")
+        title.setWordWrap(True)
+        header.addWidget(title)
+        
+        badge = QLabel(f"SCORE: {attempt.get('total_score') or 0:g}/{attempt.get('max_score') or 0:g}")
+        badge.setStyleSheet(
+            f"background-color: #2D1115; color: {COLORS['danger']}; border: 1px solid {COLORS['danger']}; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 800;"
+        )
+        header.addWidget(badge)
+        header.addStretch()
+        info_layout.addLayout(header)
+
+        percent = ((attempt.get("total_score") or 0) / attempt["max_score"] * 100) if attempt.get("max_score") else 0
+        
+        accuracy_text = "N/A"
+        mock_id = attempt.get("mock_id")
+        questions = self.db.get_questions(mock_id) if mock_id else []
+        if questions:
+            mock = self.db.get_mock(mock_id)
+            answers = json.loads(attempt.get("answers", "{}"))
+            result = calculate_score(
+                questions,
+                answers,
+                mock.get("marks_correct", 4),
+                mock.get("marks_incorrect", -1),
+            )
+            total_attempted = result.correct_count + result.wrong_count
+            if total_attempted > 0:
+                accuracy_text = f"{(result.correct_count / total_attempted * 100):.1f}%"
+        else:
+            accuracy_text = f"{percent:.1f}%"
+            
+        date_text = self._format_date(attempt.get("finished_at") or attempt.get("started_at"))
+        duration = self._duration_text(attempt)
+        
+        details = QLabel(
+            f"Date: {date_text} | Accuracy: {accuracy_text} | Percentage: {percent:.1f}% | Time: {duration}"
+        )
+        details.setProperty("role", "muted")
+        info_layout.addWidget(details)
+        layout.addLayout(info_layout, 1)
+
+        buttons = QHBoxLayout()
+        buttons.setSpacing(8)
+        
+        analyze = QPushButton("Analyze")
+        analyze.setProperty("role", "primary")
+        analyze.setMinimumHeight(36)
+        analyze.clicked.connect(lambda checked=False, att_id=attempt["id"]: self.navigate_to_analysis(att_id))
+        
+        delete = QPushButton("Delete")
+        delete.setProperty("role", "danger")
+        delete.setMinimumHeight(36)
+        delete.clicked.connect(lambda checked=False, att_id=attempt["id"]: self._delete_attempt(att_id))
+        
+        buttons.addWidget(analyze)
+        buttons.addWidget(delete)
+        layout.addLayout(buttons)
+        return card
+
+    def _delete_attempt(self, attempt_id: str):
+        reply = QMessageBox.question(
+            self,
+            "Delete Attempt",
+            "Are you sure you want to delete this test attempt?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.db.delete_attempt(attempt_id)
+            self._load()
 
     def _format_date(self, value):
         try:
@@ -102,7 +192,3 @@ class HistoryPage(QWidget):
             return f"{seconds // 60}m {seconds % 60}s"
         except Exception:
             return "-"
-
-    def _open_attempt(self, row, column):
-        if 0 <= row < len(self.attempt_ids):
-            self.navigate_to_analysis(self.attempt_ids[row])

@@ -31,6 +31,7 @@ class AttemptAnswer:
     answer: Optional[str | list[str] | float]
     time_spent_seconds: int
     marked_for_review: bool
+    status: str = "visited"
 
 
 @dataclass
@@ -41,5 +42,6 @@ class AttemptResult:
     correct_count: int
     wrong_count: int
     unattempted_count: int
+    not_visited_count: int
     section_breakdown: dict
     answers: dict

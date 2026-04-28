@@ -40,7 +40,7 @@ class TimerWidget(QLabel):
     def _render(self):
         minutes = self.seconds_remaining // 60
         seconds = self.seconds_remaining % 60
-        color = COLORS["danger"] if self.seconds_remaining <= 300 else COLORS["text_primary"]
+        color = COLORS["danger"]
         self.setText(f"{minutes:02d}:{seconds:02d}")
         self.setStyleSheet(
             f"""
