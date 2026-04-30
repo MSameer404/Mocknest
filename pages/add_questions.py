@@ -62,6 +62,11 @@ class AddQuestionsPage(QWidget):
         header.addWidget(title)
         header.addStretch()
         
+        exit_btn = QPushButton("Exit without Save")
+        exit_btn.setProperty("role", "danger")
+        exit_btn.clicked.connect(self._handle_exit_without_save)
+        header.addWidget(exit_btn)
+
         done = QPushButton("Done")
         done.setProperty("role", "primary")
         done.clicked.connect(self._handle_done)
@@ -139,6 +144,10 @@ class AddQuestionsPage(QWidget):
         self.clear_btn = QPushButton("Clear Question")
         self.clear_btn.clicked.connect(self._clear_question)
         action_row.addWidget(self.clear_btn)
+
+        self.preview_btn = QPushButton("👁️ Preview Question")
+        self.preview_btn.clicked.connect(self._preview_question)
+        action_row.addWidget(self.preview_btn)
         
         self.save_btn = QPushButton("Save Question")
         self.save_btn.setProperty("role", "primary")
@@ -279,6 +288,64 @@ class AddQuestionsPage(QWidget):
         self.question_states[question["id"]]["status"] = status
         self.palette.update_status(question["id"], status)
         self.palette.update_section_summary(self.question_states)
+
+    def _preview_question(self):
+        if self.current_index is None:
+            return
+            
+        question = self.questions[self.current_index]
+        text = self.question_text.toPlainText().strip()
+        
+        preview_q = {
+            "id": question["id"],
+            "mock_id": question["mock_id"],
+            "section": question["section"],
+            "type": question["type"],
+            "text": text or "No question text entered yet.",
+            "locked": question.get("locked", 0)
+        }
+        
+        if question["type"] == "single":
+            values = []
+            for i, letter in enumerate(("A", "B", "C", "D")):
+                val = self.option_inputs[i].toPlainText().strip()
+                if not val:
+                    val = f"Option {letter}"
+                values.append(val)
+            preview_q["options"] = [f"{letter}) {value}" for letter, value in zip(("A", "B", "C", "D"), values)]
+        else:
+            preview_q["options"] = None
+            
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout
+        from components.question_card import QuestionCard
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Question Preview")
+        dialog.resize(800, 500)
+        
+        dlg_layout = QVBoxLayout(dialog)
+        dlg_layout.setContentsMargins(10, 10, 10, 10)
+        
+        q_card = QuestionCard(dialog)
+        q_card.set_question(preview_q, self.current_index)
+        dlg_layout.addWidget(q_card)
+        
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        dlg_layout.addWidget(close_btn)
+        
+        dialog.exec()
+
+    def _handle_exit_without_save(self):
+        reply = QMessageBox.question(
+            self,
+            "Exit Without Saving?",
+            "Are you sure you want to exit? Unsaved changes to the current question will be lost.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.navigate_to_library()
 
     def _handle_done(self):
         empty_count = sum(1 for state in self.question_states.values() if state["status"] == "not_answered")

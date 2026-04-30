@@ -10,10 +10,7 @@ def seed_database(db: Database):
 
     mock_id = db.create_mock(
         title="JEE Main Sample Mock #1",
-        duration=180,
-        marks_correct=4,
-        marks_incorrect=-1,
-        sections=["Physics", "Chemistry", "Maths"],
+        author="Admin",
     )
 
     physics_questions = [

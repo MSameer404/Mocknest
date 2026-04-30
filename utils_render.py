@@ -3,6 +3,9 @@ import hashlib
 import re
 from io import BytesIO
 
+import matplotlib
+matplotlib.rcParams['savefig.facecolor'] = 'none'
+matplotlib.rcParams['figure.facecolor'] = 'none'
 from matplotlib.mathtext import math_to_image
 
 _CACHE = {}
@@ -17,10 +20,12 @@ def render_latex_to_base64(latex_str: str) -> str:
     buf = BytesIO()
     try:
         # math_to_image requires $...$ around the expression
-        expr = latex_str.strip()
+        expr = latex_str.replace("\n", " ").replace("\r", " ").strip()
+        expr = expr.replace(r"\lvert", r"\vert").replace(r"\rvert", r"\vert")
+        expr = expr.replace(r"\lVert", r"\Vert").replace(r"\rVert", r"\Vert")
         if not expr.startswith("$"):
             expr = f"${expr}$"
-        math_to_image(expr, buf, dpi=120, format="png")
+        math_to_image(expr, buf, dpi=120, format="png", color="white")
         buf.seek(0)
         b64 = base64.b64encode(buf.read()).decode("utf-8")
         _CACHE[hash_key] = b64
@@ -47,6 +52,7 @@ def text_to_html(text: str) -> str:
         return f'<span style="color: red;">[Math Error: {latex_str}]</span>'
 
     html = re.sub(r"\$\$(.*?)\$\$", latex_repl, text, flags=re.DOTALL)
+    html = re.sub(r"(?<!\$)\$(?!\$)(.*?)(?<!\$)\$(?!\$)", latex_repl, html, flags=re.DOTALL)
 
     # Replace ![alt](path) with <img src="file:///path">
     def img_repl(match):

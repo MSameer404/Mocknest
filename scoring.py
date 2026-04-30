@@ -13,6 +13,8 @@ def _normal_answer(value):
 
 
 def _parse_correct(question_type, value):
+    if value is None:
+        return None
     if question_type == "multiple":
         if isinstance(value, list):
             return value

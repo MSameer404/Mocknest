@@ -125,7 +125,10 @@ class QuestionCard(QFrame):
             if widget:
                 widget.deleteLater()
         self.option_widgets = []
-        self.button_group = None
+        if self.button_group:
+            self.button_group.deleteLater()
+        self.button_group = QButtonGroup()
+        self.button_group.setExclusive(True)
         self.numerical_input = None
 
     def _parse_options(self, raw_options):
@@ -215,11 +218,7 @@ class QuestionCard(QFrame):
             self.numerical_input.setText(str(answer))
 
     def clear_answer(self):
-        if self.button_group:
-            self.button_group.setExclusive(False)
         for widget in self.option_widgets:
             widget.setChecked(False)
-        if self.button_group:
-            self.button_group.setExclusive(True)
         if self.numerical_input:
             self.numerical_input.clear()

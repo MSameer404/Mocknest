@@ -112,8 +112,8 @@ def import_mock(db: Database, file_path: str) -> str:
         mock = payload.get("mock", {})
         questions = payload.get("questions", [])
         
-        if len(questions) != 75:
-            print("import_mock error: Invalid mock format. Must contain exactly 75 questions.")
+        if len(questions) == 0:
+            print("import_mock error: Mock contains no questions.")
             return ""
 
         original_id = mock.get("id")
